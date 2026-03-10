@@ -1,54 +1,55 @@
 # Miscellaneous
 *.class
-*.lock
 *.log
 *.pyc
 *.swp
+.DS_Store
+.atom/
 .buildlog/
 .history
+.svn/
+migrate_working_dir/
 
+# IntelliJ IDEA related
+*.iml
+*.ipr
+*.iws
+.idea/
+*.hprof
 
-
-# Flutter repo-specific
-/bin/cache/
-/bin/internal/bootstrap.bat
-/bin/internal/bootstrap.sh
-/bin/mingit/
-/dev/benchmarks/mega_gallery/
-/dev/bots/.recipe_deps
-/dev/bots/android_tools/
-/dev/devicelab/ABresults*.json
-/dev/docs/doc/
-/dev/docs/flutter.docs.zip
-/dev/docs/lib/
-/dev/docs/pubspec.yaml
-/dev/integration_tests/**/xcuserdata
-/dev/integration_tests/**/Pods
-/packages/flutter/coverage/
-version
-analysis_benchmark.json
-
-# packages file containing multi-root paths
-.packages.generated
+# Visual Studio Code related
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 
 # Flutter/Dart/Pub related
 **/doc/api/
+**/ios/Flutter/.last_build_id
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 **/generated_plugin_registrant.dart
 .packages
-.pub-preload-cache/
+.pub-cache/
 .pub/
-build/
-flutter_*.png
-linked_*.ds
-unlinked.ds
-unlinked_spec.ds
+/build/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
 
 # Android related
 **/android/**/gradle-wrapper.jar
-.gradle/
+**/android/.gradle
 **/android/captures/
 **/android/gradlew
 **/android/gradlew.bat
@@ -56,6 +57,7 @@ unlinked_spec.ds
 **/android/**/GeneratedPluginRegistrant.java
 **/android/key.properties
 *.jks
+*.keystore
 
 # iOS/XCode related
 **/ios/**/*.mode1v3
@@ -79,7 +81,7 @@ unlinked_spec.ds
 **/ios/Flutter/Flutter.framework
 **/ios/Flutter/Flutter.podspec
 **/ios/Flutter/Generated.xcconfig
-**/ios/Flutter/ephemeral
+**/ios/Flutter/ephemeral/
 **/ios/Flutter/app.flx
 **/ios/Flutter/app.zip
 **/ios/Flutter/flutter_assets/
@@ -87,11 +89,15 @@ unlinked_spec.ds
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
 
+# Web related
+lib/generated_plugin_registrant.dart
+
 # macOS
-**/Flutter/ephemeral/
-**/Pods/
 **/macos/Flutter/GeneratedPluginRegistrant.swift
-**/macos/Flutter/ephemeral
+**/macos/Flutter/ephemeral/
+**/macos/Flutter/Flutter-Debug.xcconfig
+**/macos/Flutter/Flutter-Release.xcconfig
+**/Pods/
 **/xcuserdata/
 
 # Windows
@@ -107,13 +113,8 @@ unlinked_spec.ds
 # Coverage
 coverage/
 
-# Symbols
-app.*.symbols
-
-# Exceptions to above rules.
+# Exceptions to above rules
 !**/ios/**/default.mode1v3
 !**/ios/**/default.mode2v3
 !**/ios/**/default.pbxuser
 !**/ios/**/default.perspectivev3
-!/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
-!/dev/ci/**/Gemfile.lock
