@@ -2,15 +2,19 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class RobleDatasource {
-  // Este es el identificador que vi en tu captura de pantalla
-  final String dbName = "coeval_b65ae2515f";
-  final String baseUrl = "https://roble-api.openlab.uninorte.edu.co/auth";
 
-  // Registro real en Roble
+  final String dbName = "coeval_b65ae2515f";
+
+  final String authUrl = "https://roble-api.openlab.uninorte.edu.co/auth";
+  final String databaseUrl = "https://roble-api.openlab.uninorte.edu.co/database";
+
+  // REGISTRO EN AUTH
   Future<bool> registerUser(String email, String password, String name) async {
-    final url = Uri.parse('$baseUrl/$dbName/signup');
+
+    final url = Uri.parse('$authUrl/$dbName/signup');
 
     try {
+
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -21,25 +25,58 @@ class RobleDatasource {
         }),
       );
 
+      print("STATUS CODE: ${response.statusCode}");
+      print("BODY: ${response.body}");
+
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print("Registro exitoso en Roble para: $email");
         return true;
-      } else {
-        // Esto te dirá en la consola si el correo ya existe o si la clave es corta
-        print("Error de Roble (${response.statusCode}): ${response.body}");
-        return false;
       }
+
+      return false;
+
     } catch (e) {
-      print("Error de conexión: $e");
+      print("ERROR: $e");
       return false;
     }
   }
 
-  // Login real en Roble
-  Future<String?> loginUser(String email, String password) async {
-    final url = Uri.parse('$baseUrl/$dbName/login');
+  // GUARDAR EN TABLA Registro_db
+  Future<bool> saveUserData(String email, String name, String role) async {
+
+    final url = Uri.parse('$databaseUrl/$dbName/Registro_db');
 
     try {
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "email": email,
+          "name": name,
+          "role": role
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      }
+
+      print("Error guardando usuario: ${response.body}");
+      return false;
+
+    } catch (e) {
+      print("Error conexión DB: $e");
+      return false;
+    }
+  }
+
+  // LOGIN
+  Future<String?> loginUser(String email, String password) async {
+
+    final url = Uri.parse('$authUrl/$dbName/login');
+
+    try {
+
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -50,10 +87,14 @@ class RobleDatasource {
       );
 
       if (response.statusCode == 200) {
+
         final data = jsonDecode(response.body);
-        return data['accessToken']; // Retornamos el token si el login es correcto
+        return data['accessToken'];
+
       }
+
       return null;
+
     } catch (e) {
       return null;
     }
