@@ -240,3 +240,19 @@ https://www.figma.com/make/frGotglFtnRxUM9cfFT6iR/University-Peer-Assessment-App
 - TEAMMATES – https://teammatesv4.appspot.com
 - PeerEval – https://peereval.mit.edu
 - Documentación del curso
+
+---
+
+## 18. Configuración sensible (Roble)
+
+La app soporta configuración por entorno usando `--dart-define`:
+
+- `ROBLE_DB_NAME`
+- `ROBLE_AUTH_URL`
+- `ROBLE_DATABASE_URL`
+
+Ejemplo de ejecución:
+
+- `flutter run --dart-define=ROBLE_DB_NAME=tu_db --dart-define=ROBLE_AUTH_URL=https://roble-api.openlab.uninorte.edu.co/auth --dart-define=ROBLE_DATABASE_URL=https://roble-api.openlab.uninorte.edu.co/database`
+
+Si no defines estas variables, se usan los valores por defecto actuales.

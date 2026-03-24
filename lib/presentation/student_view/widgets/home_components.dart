@@ -1,12 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Common UI components used by both student and teacher home views.
-
-/// Shorthand for the status used in the Figma design.
 enum Status { open, closed, synced, pending, completed }
 
-/// Display a coloured pill with text.
-// simple utility to capitalize the first letter of a string
 String _capitalize(String s) {
   if (s.isEmpty) return s;
   return s[0].toUpperCase() + s.substring(1);
@@ -15,7 +10,8 @@ String _capitalize(String s) {
 class StatusChip extends StatelessWidget {
   final Status status;
   final String? label;
-  const StatusChip({Key? key, required this.status, this.label}) : super(key: key);
+  const StatusChip({Key? key, required this.status, this.label})
+    : super(key: key);
 
   Color _bg() {
     switch (status) {
@@ -50,16 +46,11 @@ class StatusChip extends StatelessWidget {
         color: _bg(),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 10, color: _fg()),
-      ),
+      child: Text(text, style: TextStyle(fontSize: 10, color: _fg())),
     );
   }
 }
 
-/// A single row item used throughout the homepage layouts.  Matches the
-/// look of the React/CSS `ListItem` component from the Figma export.
 class ListItem extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -90,15 +81,32 @@ class ListItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                  ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 4),
-                    Text(subtitle!, style: const TextStyle(fontSize: 12, color: Color(0xFF777777))),
+                    Text(
+                      subtitle!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF777777),
+                      ),
+                    ),
                   ],
                   if (metadata != null) ...[
                     const SizedBox(height: 4),
-                    Text(metadata!, style: const TextStyle(fontSize: 10, color: Color(0xFF999999))),
+                    Text(
+                      metadata!,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Color(0xFF999999),
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -107,7 +115,12 @@ class ListItem extends StatelessWidget {
               rightContent!,
               const SizedBox(width: 8),
             ],
-            if (showChevron) const Icon(Icons.chevron_right, color: Color(0xFF999999), size: 20),
+            if (showChevron)
+              const Icon(
+                Icons.chevron_right,
+                color: Color(0xFF999999),
+                size: 20,
+              ),
           ],
         ),
       ),

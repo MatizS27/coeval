@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../../core/constants/roble_config.dart';
+
 class RobleException implements Exception {
   final String message;
   final int? statusCode;
@@ -13,30 +15,31 @@ class RobleException implements Exception {
 }
 
 class UserData {
+  final String? id;
+  final String? uid;
   final String email;
   final String name;
   final String role;
-  final String? id;
-  final String? avatarUrl;
 
   UserData({
+    this.id,
+    this.uid,
     required this.email,
     required this.name,
     required this.role,
-    this.id,
-    this.avatarUrl,
   });
 
   factory UserData.fromJson(Map<String, dynamic> json) {
-    String rawRole = json['role'] ?? 'student';
+    String rawRole = json['rol'] ?? json['role'] ?? 'student';
     String normalizedRole = _normalizeRole(rawRole);
-    
+
     return UserData(
+      id: (json['_id'] ?? json['id'])?.toString(),
+      uid: (json['uid'] ?? json['userId'] ?? json['id'] ?? json['_id'])
+          ?.toString(),
       email: json['email'] ?? '',
       name: json['name'] ?? '',
       role: normalizedRole,
-      id: json['_id'] ?? json['id'],
-      avatarUrl: json['avatarUrl'],
     );
   }
 
@@ -44,25 +47,26 @@ class UserData {
     switch (role.toLowerCase()) {
       case 'student':
       case 'estudiante':
-        return 'estudiante';
+        return 'student';
       case 'teacher':
       case 'profesor':
       case 'professor':
-        return 'profesor';
+        return 'teacher';
       default:
-        return 'estudiante';
+        return 'student';
     }
   }
 
   Map<String, dynamic> toJson() => {
+    if (id != null) '_id': id,
+    if (uid != null) 'uid': uid,
     'email': email,
     'name': name,
-    'role': role,
-    if (id != null) '_id': id,
+    'rol': role,
   };
 
-  bool get isStudent => role == 'estudiante';
-  bool get isTeacher => role == 'profesor';
+  bool get isStudent => role == 'student';
+  bool get isTeacher => role == 'teacher';
 }
 
 class AuthResult {
@@ -70,18 +74,14 @@ class AuthResult {
   final String? refreshToken;
   final UserData? user;
 
-  AuthResult({
-    required this.accessToken,
-    this.refreshToken,
-    this.user,
-  });
+  AuthResult({required this.accessToken, this.refreshToken, this.user});
 
   factory AuthResult.fromJson(Map<String, dynamic> json) {
     UserData? userData;
     if (json['user'] != null) {
       userData = UserData.fromJson(json['user']);
     }
-    
+
     return AuthResult(
       accessToken: json['accessToken'] ?? '',
       refreshToken: json['refreshToken'],
@@ -91,11 +91,11 @@ class AuthResult {
 }
 
 class RobleDatasource {
-  final String dbName = "coeval_b65ae2515f";
-  final String authUrl = "https://roble-api.openlab.uninorte.edu.co/auth";
-  final String databaseUrl = "https://roble-api.openlab.uninorte.edu.co/database";
-  
-  final String usersTable = "Registro_db";
+  final String dbName = RobleConfig.dbName;
+  final String authUrl = RobleConfig.authBaseUrl;
+  final String databaseUrl = RobleConfig.databaseBaseUrl;
+
+  final String usersTable = "users";
 
   String? _currentToken;
 
@@ -123,11 +123,7 @@ class RobleDatasource {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          "email": email,
-          "password": password,
-          "name": name,
-        }),
+        body: jsonEncode({"email": email, "password": password, "name": name}),
       );
 
       _log('REGISTER', 'Status: ${response.statusCode}');
@@ -137,7 +133,8 @@ class RobleDatasource {
         return true;
       }
 
-      if (response.statusCode == 409 || response.body.contains('already exists')) {
+      if (response.statusCode == 409 ||
+          response.body.contains('already exists')) {
         throw RobleException(
           'Este correo ya está registrado',
           statusCode: response.statusCode,
@@ -155,30 +152,49 @@ class RobleDatasource {
     }
   }
 
-  Future<bool> saveUserData(String email, String name, String role) async {
-    final url = Uri.parse('$databaseUrl/$dbName/$usersTable');
+  Future<bool> saveUserData(
+    String email,
+    String name,
+    String role,
+    String uid,
+  ) async {
+    final url = Uri.parse('$databaseUrl/$dbName/insert');
 
     try {
+      final record = {"uid": uid, "email": email, "name": name, "rol": role};
+
+      record.remove('_id');
+
       final body = jsonEncode({
-        "email": email,
-        "name": name,
-        "role": role,
+        "tableName": usersTable,
+        "records": [record],
       });
 
       _log('SAVE_USER', 'URL: $url');
       _log('SAVE_USER', 'Body: $body');
 
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: body,
-      );
+      final response = await http.post(url, headers: _authHeaders, body: body);
 
       _log('SAVE_USER', 'Status: ${response.statusCode}');
       _log('SAVE_USER', 'Response: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return true;
+        final data = jsonDecode(response.body);
+
+        final inserted =
+            data is Map<String, dynamic> && data['inserted'] is List
+            ? data['inserted'] as List
+            : const [];
+
+        final skipped = data is Map<String, dynamic> && data['skipped'] is List
+            ? data['skipped'] as List
+            : const [];
+
+        if (skipped.isNotEmpty) {
+          _log('SAVE_USER', 'Skipped rows: $skipped');
+        }
+
+        return inserted.isNotEmpty;
       }
 
       _log('SAVE_USER', 'Failed with status: ${response.statusCode}');
@@ -189,18 +205,36 @@ class RobleDatasource {
     }
   }
 
+  String? extractUidFromToken(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length < 2) {
+        return null;
+      }
+
+      final payload = utf8.decode(
+        base64Url.decode(base64Url.normalize(parts[1])),
+      );
+      final Map<String, dynamic> claims = jsonDecode(payload);
+
+      return claims['sub']?.toString() ??
+          claims['uid']?.toString() ??
+          claims['id']?.toString() ??
+          claims['userId']?.toString();
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<AuthResult> loginUser(String email, String password) async {
     final url = Uri.parse('$authUrl/$dbName/login');
 
     try {
-      final body = jsonEncode({
-        "email": email,
-        "password": password,
-      });
-      
+      final body = jsonEncode({"email": email, "password": password});
+
       _log('LOGIN', 'URL: $url');
       _log('LOGIN', 'Request: $body');
-      
+
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -231,23 +265,21 @@ class RobleDatasource {
   }
 
   Future<UserData?> getUserData(String email) async {
-    final encodedEmail = Uri.encodeQueryComponent(email);
-    final url = Uri.parse('$databaseUrl/$dbName/$usersTable?email=$encodedEmail');
+    final url = Uri.parse(
+      '$databaseUrl/$dbName/read?tableName=$usersTable&email=${Uri.encodeQueryComponent(email)}',
+    );
 
     try {
       _log('GET_USER', 'URL: $url');
-      
-      final response = await http.get(
-        url,
-        headers: {'Content-Type': 'application/json'},
-      );
+
+      final response = await http.get(url, headers: _authHeaders);
 
       _log('GET_USER', 'Status: ${response.statusCode}');
       _log('GET_USER', 'Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
+
         if (data is List && data.isNotEmpty) {
           return UserData.fromJson(data[0]);
         } else if (data is Map<String, dynamic> && data.isNotEmpty) {
@@ -261,7 +293,7 @@ class RobleDatasource {
             return UserData.fromJson(data);
           }
         }
-        
+
         return null;
       }
 
@@ -278,10 +310,7 @@ class RobleDatasource {
     final url = Uri.parse('$authUrl/$dbName/logout');
 
     try {
-      final response = await http.post(
-        url,
-        headers: _authHeaders,
-      );
+      final response = await http.post(url, headers: _authHeaders);
 
       _currentToken = null;
       return response.statusCode == 200;
@@ -297,10 +326,7 @@ class RobleDatasource {
     final url = Uri.parse('$authUrl/$dbName/verify-token');
 
     try {
-      final response = await http.get(
-        url,
-        headers: _authHeaders,
-      );
+      final response = await http.get(url, headers: _authHeaders);
 
       return response.statusCode == 200;
     } catch (e) {

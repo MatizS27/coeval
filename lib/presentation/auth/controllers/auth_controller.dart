@@ -2,9 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../data/datasources/roble_datasource.dart';
+import '../../../domain/usecases/login_use_case.dart';
 
 class AuthController extends GetxController {
-  final RobleDatasource _robleService = RobleDatasource();
+  final RegisterStudentUseCase _registerStudentUseCase;
+  final LoginUseCase _loginUseCase;
+  final GetUserByEmailUseCase _getUserByEmailUseCase;
+  final LogoutUseCase _logoutUseCase;
+  final VerifyTokenUseCase _verifyTokenUseCase;
+  final SetTokenUseCase _setTokenUseCase;
+
+  AuthController({
+    required RegisterStudentUseCase registerStudentUseCase,
+    required LoginUseCase loginUseCase,
+    required GetUserByEmailUseCase getUserByEmailUseCase,
+    required LogoutUseCase logoutUseCase,
+    required VerifyTokenUseCase verifyTokenUseCase,
+    required SetTokenUseCase setTokenUseCase,
+  }) : _registerStudentUseCase = registerStudentUseCase,
+       _loginUseCase = loginUseCase,
+       _getUserByEmailUseCase = getUserByEmailUseCase,
+       _logoutUseCase = logoutUseCase,
+       _verifyTokenUseCase = verifyTokenUseCase,
+       _setTokenUseCase = setTokenUseCase;
 
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
@@ -15,8 +35,6 @@ class AuthController extends GetxController {
   var name = ''.obs;
   var isLoading = false.obs;
   var obscurePassword = true.obs;
-  
-  var selectedRole = 'estudiante'.obs;
 
   var currentUser = Rxn<UserData>();
   var isLoggedIn = false.obs;
@@ -42,29 +60,57 @@ class AuthController extends GetxController {
   Future<void> _checkExistingSession() async {
     final prefs = await SharedPreferences.getInstance();
     final savedToken = prefs.getString('access_token');
+    final savedId = prefs.getString('user_id');
     final savedEmail = prefs.getString('user_email');
-    final savedName = prefs.getString('user_name');
-    final savedRole = prefs.getString('user_role');
 
     if (savedToken != null && savedEmail != null) {
-      _robleService.setToken(savedToken);
-      
-      final isValid = await _robleService.verifyToken();
+      _setTokenUseCase(savedToken);
+
+      final isValid = await _verifyTokenUseCase();
       if (isValid) {
-        currentUser.value = UserData(
-          email: savedEmail,
-          name: savedName ?? savedEmail.split('@').first,
-          role: savedRole ?? 'estudiante',
-        );
+        final dbUser = await _getUserByEmailUseCase(savedEmail);
+
+        if (dbUser == null) {
+          await _clearSession();
+          return;
+        }
+
+        final resolvedUser =
+            (dbUser.id == null || dbUser.id!.isEmpty) &&
+                savedId != null &&
+                savedId.isNotEmpty
+            ? UserData(
+                id: savedId,
+                uid: dbUser.uid,
+                email: dbUser.email,
+                name: dbUser.name,
+                role: dbUser.role,
+              )
+            : dbUser;
+
+        currentUser.value = resolvedUser;
         isLoggedIn.value = true;
-        Get.offAllNamed('/home');
+
+        if (resolvedUser.id != null && resolvedUser.id!.isNotEmpty) {
+          await prefs.setString('user_id', resolvedUser.id!);
+        }
+        await prefs.setString('user_name', resolvedUser.name);
+        await prefs.setString('user_role', resolvedUser.role);
+        if (resolvedUser.uid != null && resolvedUser.uid!.isNotEmpty) {
+          await prefs.setString('user_uid', resolvedUser.uid!);
+        }
       } else {
         await _clearSession();
       }
     }
   }
 
-  Future<void> _saveSession(String token, String userEmail, String? refreshToken, UserData? user) async {
+  Future<void> _saveSession(
+    String token,
+    String userEmail,
+    String? refreshToken,
+    UserData? user,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('access_token', token);
     await prefs.setString('user_email', userEmail);
@@ -72,19 +118,27 @@ class AuthController extends GetxController {
       await prefs.setString('refresh_token', refreshToken);
     }
     if (user != null) {
+      if (user.id != null && user.id!.isNotEmpty) {
+        await prefs.setString('user_id', user.id!);
+      }
       await prefs.setString('user_name', user.name);
       await prefs.setString('user_role', user.role);
+      if (user.uid != null && user.uid!.isNotEmpty) {
+        await prefs.setString('user_uid', user.uid!);
+      }
     }
   }
 
   Future<void> _clearSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('access_token');
+    await prefs.remove('user_id');
     await prefs.remove('user_email');
     await prefs.remove('refresh_token');
     await prefs.remove('user_name');
     await prefs.remove('user_role');
-    _robleService.setToken(null);
+    await prefs.remove('user_uid');
+    _setTokenUseCase(null);
     currentUser.value = null;
     isLoggedIn.value = false;
   }
@@ -106,7 +160,6 @@ class AuthController extends GetxController {
     name.value = '';
     email.value = '';
     password.value = '';
-    selectedRole.value = 'estudiante';
     nameError.value = null;
     emailError.value = null;
     passwordError.value = null;
@@ -122,8 +175,10 @@ class AuthController extends GetxController {
       emailError.value = 'El correo es requerido';
       return false;
     }
-    
-    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+
+    final emailRegex = RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    );
     if (!emailRegex.hasMatch(emailValue)) {
       emailError.value = 'Ingresa un correo válido';
       return false;
@@ -189,39 +244,20 @@ class AuthController extends GetxController {
 
     isLoading.value = true;
 
-    final roleToSend = selectedRole.value;
     final emailToSend = email.value.trim();
     final passwordToSend = password.value;
     final nameToSend = name.value.trim();
 
     try {
-      final success = await _robleService.registerUser(
-        emailToSend,
-        passwordToSend,
-        nameToSend,
+      await _registerStudentUseCase(
+        email: emailToSend,
+        password: passwordToSend,
+        name: nameToSend,
       );
 
-      if (success) {
-        final savedData = await _robleService.saveUserData(
-          emailToSend,
-          nameToSend,
-          roleToSend,
-        );
+      _showSuccess('Registro exitoso', 'Tu cuenta fue creada como estudiante');
 
-        if (savedData) {
-          _showSuccess(
-            'Registro exitoso',
-            'Tu cuenta fue creada como $roleToSend',
-          );
-        } else {
-          _showSuccess(
-            'Registro exitoso',
-            'Tu cuenta fue creada. Inicia sesión.',
-          );
-        }
-
-        Get.offAllNamed('/login');
-      }
+      Get.offAllNamed('/login');
     } on RobleException catch (e) {
       _showError(e.message);
     } catch (e) {
@@ -243,24 +279,22 @@ class AuthController extends GetxController {
     final passwordToLogin = password.value;
 
     try {
-      final result = await _robleService.loginUser(
-        emailToLogin,
-        passwordToLogin,
+      final result = await _loginUseCase(
+        email: emailToLogin,
+        password: passwordToLogin,
       );
 
-      // Use user data from login response if available
-      UserData userData;
-      if (result.user != null) {
-        userData = result.user!;
-      } else {
-        // Fallback: try to get from our database
-        final dbUser = await _robleService.getUserData(emailToLogin);
-        userData = dbUser ?? UserData(
-          email: emailToLogin,
-          name: emailToLogin.split('@').first,
-          role: 'estudiante',
+      final dbUser = await _getUserByEmailUseCase(emailToLogin);
+
+      if (dbUser == null) {
+        await _clearSession();
+        _showError(
+          'Tu cuenta no está registrada en la tabla users. Contacta al administrador.',
         );
+        return;
       }
+
+      final userData = dbUser;
 
       await _saveSession(
         result.accessToken,
@@ -271,8 +305,8 @@ class AuthController extends GetxController {
 
       currentUser.value = userData;
       isLoggedIn.value = true;
-      
-      Get.offAllNamed('/home');
+
+      Get.offAllNamed('/');
     } on RobleException catch (e) {
       _showError(e.message);
     } catch (e) {
@@ -284,13 +318,13 @@ class AuthController extends GetxController {
 
   Future<void> logout() async {
     isLoading.value = true;
-    
+
     try {
-      await _robleService.logout();
+      await _logoutUseCase();
     } finally {
       await _clearSession();
       isLoading.value = false;
-      Get.offAllNamed('/login');
+      Get.offAllNamed('/');
     }
   }
 
