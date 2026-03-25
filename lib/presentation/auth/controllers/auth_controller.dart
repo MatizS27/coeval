@@ -11,6 +11,8 @@ class AuthController extends GetxController {
   final LogoutUseCase _logoutUseCase;
   final VerifyTokenUseCase _verifyTokenUseCase;
   final SetTokenUseCase _setTokenUseCase;
+  final ForgotPasswordUseCase _forgotPasswordUseCase;
+  final ResetPasswordUseCase _resetPasswordUseCase;
 
   AuthController({
     required RegisterStudentUseCase registerStudentUseCase,
@@ -19,12 +21,16 @@ class AuthController extends GetxController {
     required LogoutUseCase logoutUseCase,
     required VerifyTokenUseCase verifyTokenUseCase,
     required SetTokenUseCase setTokenUseCase,
+    required ForgotPasswordUseCase forgotPasswordUseCase,
+    required ResetPasswordUseCase resetPasswordUseCase,
   }) : _registerStudentUseCase = registerStudentUseCase,
        _loginUseCase = loginUseCase,
        _getUserByEmailUseCase = getUserByEmailUseCase,
        _logoutUseCase = logoutUseCase,
        _verifyTokenUseCase = verifyTokenUseCase,
-       _setTokenUseCase = setTokenUseCase;
+       _setTokenUseCase = setTokenUseCase,
+       _forgotPasswordUseCase = forgotPasswordUseCase,
+       _resetPasswordUseCase = resetPasswordUseCase;
 
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
@@ -325,6 +331,27 @@ class AuthController extends GetxController {
       await _clearSession();
       isLoading.value = false;
       Get.offAllNamed('/');
+    }
+  }
+
+  Future<void> forgotPassword() async {
+    if (!_validateEmail(email.value)) {
+      return;
+    }
+
+    isLoading.value = true;
+
+    final emailToSend = email.value.trim();
+
+    try {
+      await _forgotPasswordUseCase(emailToSend);
+      _showSuccess('Correo enviado', 'Revisa tu bandeja de entrada para restablecer tu contraseña');
+    } on RobleException catch (e) {
+      _showError(e.message);
+    } catch (e) {
+      _showError('Error inesperado. Intenta de nuevo.');
+    } finally {
+      isLoading.value = false;
     }
   }
 

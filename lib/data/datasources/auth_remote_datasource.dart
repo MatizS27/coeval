@@ -45,4 +45,12 @@ class AuthRemoteDatasource {
   void setToken(String? token) {
     _robleDatasource.setToken(token);
   }
+
+  Future<bool> forgotPassword(String email) {
+    return _robleDatasource.forgotPassword(email);
+  }
+
+  Future<bool> resetPassword(String token, String newPassword) {
+    return _robleDatasource.resetPassword(token, newPassword);
+  }
 }

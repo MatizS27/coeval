@@ -69,6 +69,26 @@ class SetTokenUseCase {
   }
 }
 
+class ForgotPasswordUseCase {
+  final AuthRepository _repository;
+
+  ForgotPasswordUseCase(this._repository);
+
+  Future<void> call(String email) {
+    return _repository.forgotPassword(email);
+  }
+}
+
+class ResetPasswordUseCase {
+  final AuthRepository _repository;
+
+  ResetPasswordUseCase(this._repository);
+
+  Future<void> call(String token, String newPassword) {
+    return _repository.resetPassword(token, newPassword);
+  }
+}
+
 class ExtractUidFromTokenUseCase {
   final AuthRepository _repository;
 

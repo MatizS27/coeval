@@ -20,4 +20,8 @@ abstract class AuthRepository {
   String? extractUidFromToken(String token);
 
   void setToken(String? token);
+
+  Future<void> forgotPassword(String email);
+
+  Future<void> resetPassword(String token, String newPassword);
 }

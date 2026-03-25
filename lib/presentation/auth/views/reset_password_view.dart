@@ -1,50 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/theme.dart';
-import '../controllers/auth_controller.dart';
+import '../controllers/reset_password_controller.dart';
 
-class LoginView extends StatefulWidget {
-  const LoginView({super.key});
+class ResetPasswordView extends StatefulWidget {
+  const ResetPasswordView({super.key});
 
   @override
-  State<LoginView> createState() => _LoginViewState();
+  State<ResetPasswordView> createState() => _ResetPasswordViewState();
 }
 
-class _LoginViewState extends State<LoginView> {
-  final AuthController controller = Get.find();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      controller.prepareForLogin();
-    });
-  }
+class _ResetPasswordViewState extends State<ResetPasswordView> {
+  final ResetPasswordController controller = Get.find();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Restablecer Contraseña'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               children: [
-                const SizedBox(height: 60),
+                const SizedBox(height: 40),
                 
                 _buildHeader(),
                 
-                const SizedBox(height: 50),
+                const SizedBox(height: 40),
                 
-                _buildLoginForm(),
+                _buildResetForm(),
                 
                 const SizedBox(height: 40),
                 
-                _buildLoginButton(),
-                
-                const SizedBox(height: 24),
-                
-                _buildRegisterLink(),
+                _buildResetButton(),
                 
                 const SizedBox(height: 40),
               ],
@@ -59,11 +52,11 @@ class _LoginViewState extends State<LoginView> {
     return Column(
       children: [
         Container(
-          width: 100,
-          height: 100,
+          width: 80,
+          height: 80,
           decoration: BoxDecoration(
             color: AppColors.primary,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
                 color: AppColors.primary.withValues(alpha: 0.3),
@@ -73,8 +66,8 @@ class _LoginViewState extends State<LoginView> {
             ],
           ),
           child: const Icon(
-            Icons.school_rounded,
-            size: 50,
+            Icons.lock_reset_rounded,
+            size: 40,
             color: Colors.white,
           ),
         ),
@@ -82,30 +75,29 @@ class _LoginViewState extends State<LoginView> {
         const SizedBox(height: 24),
         
         const Text(
-          'CoEval',
+          'Restablecer Contraseña',
           style: TextStyle(
-            fontSize: 32,
+            fontSize: 24,
             fontWeight: FontWeight.bold,
             color: AppColors.textPrimary,
-            letterSpacing: 1.2,
           ),
         ),
         
         const SizedBox(height: 8),
         
         Text(
-          'Evaluación entre pares',
+          'Ingresa el token de recuperación y tu nueva contraseña',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 14,
             color: AppColors.textSecondary,
-            letterSpacing: 0.5,
           ),
+          textAlign: TextAlign.center,
         ),
       ],
     );
   }
 
-  Widget _buildLoginForm() {
+  Widget _buildResetForm() {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -122,82 +114,64 @@ class _LoginViewState extends State<LoginView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Iniciar Sesión',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          
-          const SizedBox(height: 8),
-          
-          Text(
-            'Ingresa con tu correo institucional',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          
-          const SizedBox(height: 24),
-          
           Obx(() => TextField(
-            controller: controller.emailController,
-            onChanged: (v) => controller.email.value = v,
-            keyboardType: TextInputType.emailAddress,
+            controller: controller.tokenController,
+            onChanged: (v) => controller.token.value = v,
             decoration: InputDecoration(
-              labelText: 'Correo institucional',
-              hintText: 'usuario@uninorte.edu.co',
-              prefixIcon: const Icon(Icons.email_outlined),
-              errorText: controller.emailError.value,
+              labelText: 'Token de recuperación',
+              hintText: 'Ingresa el token del email',
+              prefixIcon: const Icon(Icons.vpn_key_outlined),
+              errorText: controller.tokenError.value,
             ),
           )),
           
           const SizedBox(height: 16),
           
           Obx(() => TextField(
-            controller: controller.passwordController,
-            obscureText: controller.obscurePassword.value,
-            onChanged: (v) => controller.password.value = v,
+            controller: controller.newPasswordController,
+            obscureText: controller.obscureNewPassword.value,
+            onChanged: (v) => controller.newPassword.value = v,
             decoration: InputDecoration(
-              labelText: 'Contraseña',
+              labelText: 'Nueva contraseña',
               prefixIcon: const Icon(Icons.lock_outlined),
-              errorText: controller.passwordError.value,
+              errorText: controller.newPasswordError.value,
               suffixIcon: IconButton(
                 icon: Icon(
-                  controller.obscurePassword.value
+                  controller.obscureNewPassword.value
                       ? Icons.visibility_outlined
                       : Icons.visibility_off_outlined,
                 ),
-                onPressed: controller.togglePasswordVisibility,
+                onPressed: controller.toggleNewPasswordVisibility,
               ),
             ),
           )),
           
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: controller.forgotPassword,
-              child: const Text(
-                '¿Olvidaste tu contraseña?',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+          Obx(() => TextField(
+            controller: controller.confirmPasswordController,
+            obscureText: controller.obscureConfirmPassword.value,
+            onChanged: (v) => controller.confirmPassword.value = v,
+            decoration: InputDecoration(
+              labelText: 'Confirmar contraseña',
+              prefixIcon: const Icon(Icons.lock_outlined),
+              errorText: controller.confirmPasswordError.value,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  controller.obscureConfirmPassword.value
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
                 ),
+                onPressed: controller.toggleConfirmPasswordVisibility,
               ),
             ),
-          ),
+          )),
         ],
       ),
     );
   }
 
-  Widget _buildLoginButton() {
+  Widget _buildResetButton() {
     return Obx(() => SizedBox(
       width: double.infinity,
       height: 56,
@@ -208,7 +182,7 @@ class _LoginViewState extends State<LoginView> {
               ),
             )
           : ElevatedButton(
-              onPressed: controller.login,
+              onPressed: controller.resetPassword,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(
@@ -220,7 +194,7 @@ class _LoginViewState extends State<LoginView> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Ingresar',
+                    'Restablecer Contraseña',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -228,36 +202,10 @@ class _LoginViewState extends State<LoginView> {
                     ),
                   ),
                   SizedBox(width: 8),
-                  Icon(Icons.arrow_forward_rounded, color: Colors.white),
+                  Icon(Icons.check_circle_outline, color: Colors.white),
                 ],
               ),
             ),
     ));
-  }
-
-  Widget _buildRegisterLink() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          '¿No tienes cuenta?',
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 15,
-          ),
-        ),
-        TextButton(
-          onPressed: () => Get.toNamed('/register'),
-          child: const Text(
-            'Crear cuenta',
-            style: TextStyle(
-              color: AppColors.primary,
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
-    );
   }
 }

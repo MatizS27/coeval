@@ -76,4 +76,20 @@ class AuthRepositoryImpl implements AuthRepository {
   void setToken(String? token) {
     _remoteDatasource.setToken(token);
   }
+
+  @override
+  Future<void> forgotPassword(String email) async {
+    final success = await _remoteDatasource.forgotPassword(email);
+    if (!success) {
+      throw RobleException('No se pudo enviar el correo de recuperación');
+    }
+  }
+
+  @override
+  Future<void> resetPassword(String token, String newPassword) async {
+    final success = await _remoteDatasource.resetPassword(token, newPassword);
+    if (!success) {
+      throw RobleException('No se pudo restablecer la contraseña');
+    }
+  }
 }

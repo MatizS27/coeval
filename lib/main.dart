@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:app_links/app_links.dart';
 
 import 'central.dart';
 import 'core/theme.dart';
@@ -14,6 +15,8 @@ import 'domain/usecases/login_use_case.dart';
 import 'presentation/auth/controllers/auth_controller.dart';
 import 'presentation/auth/views/login_view.dart';
 import 'presentation/auth/views/register_view.dart';
+import 'presentation/auth/controllers/reset_password_controller.dart';
+import 'presentation/auth/views/reset_password_view.dart';
 import 'presentation/student_view/controllers/student_home_controller.dart';
 import 'presentation/teacher_view/controllers/teacher_home_controller.dart';
 
@@ -46,7 +49,14 @@ void main() {
       logoutUseCase: LogoutUseCase(authRepository),
       verifyTokenUseCase: VerifyTokenUseCase(authRepository),
       setTokenUseCase: SetTokenUseCase(authRepository),
+      forgotPasswordUseCase: ForgotPasswordUseCase(authRepository),
+      resetPasswordUseCase: ResetPasswordUseCase(authRepository),
     ),
+    permanent: true,
+  );
+
+  Get.put(
+    ResetPasswordController(ResetPasswordUseCase(authRepository)),
     permanent: true,
   );
 
@@ -77,7 +87,43 @@ void main() {
     permanent: true,
   );
 
+  Get.put(
+    ResetPasswordController(ResetPasswordUseCase(authRepository)),
+    permanent: true,
+  );
+
+  // Handle deep links
+  final appLinks = AppLinks();
+  _handleDeepLinks(appLinks);
+
   runApp(const MyApp());
+}
+
+void _handleDeepLinks(AppLinks appLinks) async {
+  // Handle initial link
+  try {
+    final initialLink = await appLinks.getInitialLink();
+    if (initialLink != null) {
+      _handleLink(initialLink.toString());
+    }
+  } on PlatformException {
+    // Handle exception
+  }
+
+  // Handle links while app is running
+  appLinks.uriLinkStream.listen((Uri? uri) {
+    if (uri != null) {
+      _handleLink(uri.toString());
+    }
+  });
+}
+
+void _handleLink(String link) {
+  final uri = Uri.parse(link);
+  if (uri.path == '/reset-password' && uri.queryParameters.containsKey('token')) {
+    final token = uri.queryParameters['token']!;
+    Get.toNamed('/reset-password', arguments: token);
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -104,6 +150,11 @@ class MyApp extends StatelessWidget {
         GetPage(
           name: '/register',
           page: () => const RegisterView(),
+          transition: Transition.rightToLeft,
+        ),
+        GetPage(
+          name: '/reset-password',
+          page: () => const ResetPasswordView(),
           transition: Transition.rightToLeft,
         ),
       ],

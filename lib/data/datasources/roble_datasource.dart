@@ -357,6 +357,62 @@ class RobleDatasource {
     }
   }
 
+  Future<bool> forgotPassword(String email) async {
+    final url = Uri.parse('$authUrl/$dbName/forgot-password');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({"email": email}),
+      );
+
+      _log('FORGOT_PASSWORD', 'Status: ${response.statusCode}');
+      _log('FORGOT_PASSWORD', 'Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      }
+
+      final errorBody = _parseErrorBody(response.body);
+      throw RobleException(
+        errorBody ?? 'Error al enviar el correo de recuperación',
+        statusCode: response.statusCode,
+      );
+    } catch (e) {
+      if (e is RobleException) rethrow;
+      throw RobleException('Error de conexión: $e');
+    }
+  }
+
+  Future<bool> resetPassword(String token, String newPassword) async {
+    final url = Uri.parse('$authUrl/$dbName/reset-password');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({"token": token, "newPassword": newPassword}),
+      );
+
+      _log('RESET_PASSWORD', 'Status: ${response.statusCode}');
+      _log('RESET_PASSWORD', 'Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      }
+
+      final errorBody = _parseErrorBody(response.body);
+      throw RobleException(
+        errorBody ?? 'Error al restablecer la contraseña',
+        statusCode: response.statusCode,
+      );
+    } catch (e) {
+      if (e is RobleException) rethrow;
+      throw RobleException('Error de conexión: $e');
+    }
+  }
+
   String? _parseErrorBody(String body) {
     try {
       final data = jsonDecode(body);
