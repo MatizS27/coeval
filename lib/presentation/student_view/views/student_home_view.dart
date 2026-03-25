@@ -98,15 +98,16 @@ class _StudentCourseCard extends StatelessWidget {
             const SizedBox(height: 12),
             ...course.categories.map((category) {
               final myGroups = category.groups
-                  .where((group) =>
-                      group.students.any((student) =>
+                  .where(
+                    (group) => group.students.any(
+                      (student) =>
                           student.email.trim().toLowerCase() ==
-                          (Get.find<AuthController>()
-                              .currentUser
-                              .value
-                              ?.email
-                              .trim()
-                              .toLowerCase() ?? '')))
+                          (Get.find<AuthController>().currentUser.value?.email
+                                  .trim()
+                                  .toLowerCase() ??
+                              ''),
+                    ),
+                  )
                   .toList();
 
               if (myGroups.isEmpty) {
@@ -136,6 +137,13 @@ class _StudentCourseCard extends StatelessWidget {
                       const SizedBox(height: 6),
                       ...myGroups.map((group) {
                         final classmates = group.students;
+                        final currentEmail = Get.find<AuthController>()
+                            .currentUser
+                            .value
+                            ?.email
+                            ?.trim()
+                            .toLowerCase();
+
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 6),
                           child: Column(
@@ -151,13 +159,27 @@ class _StudentCourseCard extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               ...classmates.map((mate) {
+                                final mateEmail = mate.email
+                                    .trim()
+                                    .toLowerCase();
+                                final studentName = mate.name.isEmpty
+                                    ? mate.email
+                                    : mate.name;
+                                final isLogged =
+                                    currentEmail != null &&
+                                    mateEmail == currentEmail;
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 2),
                                   child: Text(
-                                    '- ${mate.name.isEmpty ? mate.email : mate.name}',
-                                    style: const TextStyle(
+                                    '- ${studentName}${isLogged ? ' (Tú)' : ''}',
+                                    style: TextStyle(
                                       fontSize: 12,
-                                      color: Color(0xFF666666),
+                                      color: isLogged
+                                          ? const Color(0xFFF76900)
+                                          : const Color(0xFF666666),
+                                      fontWeight: isLogged
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
                                     ),
                                   ),
                                 );

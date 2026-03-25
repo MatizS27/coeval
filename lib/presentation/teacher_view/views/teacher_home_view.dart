@@ -74,23 +74,48 @@ class TeacherHomeView extends StatelessWidget {
       context: context,
       builder: (_) {
         return AlertDialog(
-          title: const Text('Crear curso'),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          title: Row(
+            children: const [
+              Icon(Icons.class_, color: Color(0xFFF76900)),
+              SizedBox(width: 8),
+              Text('Crear curso', style: TextStyle(color: Color(0xFF2D2D2D))),
+            ],
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'Nombre'),
+                decoration: InputDecoration(
+                  labelText: 'Nombre',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               TextField(
                 controller: nrcCtrl,
-                decoration: const InputDecoration(labelText: 'NRC'),
+                decoration: InputDecoration(
+                  labelText: 'NRC',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               TextField(
                 controller: termCtrl,
-                decoration: const InputDecoration(labelText: 'Periodo'),
+                decoration: InputDecoration(
+                  labelText: 'Periodo',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
               ),
             ],
           ),
@@ -100,6 +125,12 @@ class TeacherHomeView extends StatelessWidget {
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF76900),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
               onPressed: () async {
                 final name = nameCtrl.text.trim();
                 final nrc = nrcCtrl.text.trim();
@@ -225,17 +256,39 @@ class _CourseCard extends StatelessWidget {
                 }),
               ],
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _openCategorySyncDialog(context),
-                      icon: const Icon(Icons.upload_file),
-                      label: const Text('Cargar CSV'),
+              Obx(() {
+                final isProcessing = controller.isCsvProcessing(course.id);
+                return Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: isProcessing
+                            ? null
+                            : () => _openCategorySyncDialog(context),
+                        icon: isProcessing
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFFF76900),
+                                ),
+                              )
+                            : const Icon(Icons.upload_file),
+                        label: Text(
+                          isProcessing ? 'Procesando CSV...' : 'Cargar CSV',
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: isProcessing
+                              ? Colors.grey
+                              : const Color(0xFF2D2D2D),
+                          side: const BorderSide(color: Color(0xFFCCCCCC)),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                );
+              }),
             ],
           ),
         ),

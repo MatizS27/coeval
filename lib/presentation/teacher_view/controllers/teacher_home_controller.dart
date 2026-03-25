@@ -29,16 +29,13 @@ class TeacherHomeController extends GetxController {
 
   final isLoading = false.obs;
   final courses = <TeacherCourseOverview>[].obs;
+  final processingCsvCourseIds = <String>[].obs;
   Worker? _authWorker;
 
   List<String> get _teacherOwnerCandidates {
     final user = _authController.currentUser.value;
 
-    final raw = <String?>[
-      user?.email,
-      user?.uid,
-      user?.id,
-    ];
+    final raw = <String?>[user?.email, user?.uid, user?.id];
 
     final normalized = raw
         .whereType<String>()
@@ -60,17 +57,17 @@ class TeacherHomeController extends GetxController {
   void onInit() {
     super.onInit();
 
-    _authWorker = everAll([
-      _authController.isLoggedIn,
-      _authController.currentUser,
-    ], (_) async {
-      if (_authController.isLoggedIn.value &&
-          _authController.currentUser.value != null) {
-        await loadCourses();
-      } else {
-        courses.clear();
-      }
-    });
+    _authWorker = everAll(
+      [_authController.isLoggedIn, _authController.currentUser],
+      (_) async {
+        if (_authController.isLoggedIn.value &&
+            _authController.currentUser.value != null) {
+          await loadCourses();
+        } else {
+          courses.clear();
+        }
+      },
+    );
 
     loadCourses();
   }
@@ -170,6 +167,10 @@ class TeacherHomeController extends GetxController {
     }
   }
 
+  bool isCsvProcessing(String courseId) {
+    return processingCsvCourseIds.contains(courseId);
+  }
+
   Future<void> syncCsvContent({
     required String courseId,
     required String categoryName,
@@ -177,8 +178,11 @@ class TeacherHomeController extends GetxController {
     required String uploadedBy,
   }) async {
     isLoading.value = true;
+    processingCsvCourseIds.add(courseId);
 
     try {
+      // Evitar múltiples llamadas repetidas en un mismo ciclo de UI
+      // y mantener visual consistente.
       final result = await _syncCategoryFromCsvUseCase(
         courseId: courseId,
         categoryName: categoryName,
@@ -202,6 +206,7 @@ class TeacherHomeController extends GetxController {
       _showError('No se pudo procesar el CSV: $e');
     } finally {
       isLoading.value = false;
+      processingCsvCourseIds.remove(courseId);
     }
   }
 
