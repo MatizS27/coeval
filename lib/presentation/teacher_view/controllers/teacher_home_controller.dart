@@ -32,7 +32,7 @@ class TeacherHomeController extends GetxController {
   final processingCsvCourseIds = <String>[].obs;
   Worker? _authWorker;
 
-  List<String> get _teacherOwnerCandidates {
+  List<String> get teacherOwnerCandidates {
     final user = _authController.currentUser.value;
 
     final raw = <String?>[user?.email, user?.uid, user?.id];
@@ -48,9 +48,9 @@ class TeacherHomeController extends GetxController {
     return normalized;
   }
 
-  String get _primaryTeacherOwner {
-    final candidates = _teacherOwnerCandidates;
-    return candidates.isEmpty ? '' : candidates.first;
+  String get primaryTeacherOwner {
+    final candidates = teacherOwnerCandidates;
+    return candidates.isNotEmpty ? candidates.first : '';
   }
 
   @override
@@ -79,7 +79,7 @@ class TeacherHomeController extends GetxController {
   }
 
   Future<void> loadCourses() async {
-    final owner = _primaryTeacherOwner;
+    final owner = primaryTeacherOwner;
     if (owner.isEmpty) {
       return;
     }
@@ -98,7 +98,7 @@ class TeacherHomeController extends GetxController {
     required String nrc,
     required String term,
   }) async {
-    final teacherOwner = _primaryTeacherOwner;
+    final teacherOwner = primaryTeacherOwner;
     if (teacherOwner.isEmpty) {
       _showError('No se pudo identificar el profesor actual');
       return;
@@ -129,9 +129,8 @@ class TeacherHomeController extends GetxController {
 
   Future<void> pickCsvAndSync({
     required String courseId,
-    required String categoryName,
   }) async {
-    final teacherOwner = _primaryTeacherOwner;
+    final teacherOwner = primaryTeacherOwner;
     if (teacherOwner.isEmpty) {
       _showError('No se pudo identificar el profesor actual');
       return;
@@ -149,9 +148,17 @@ class TeacherHomeController extends GetxController {
       }
 
       final file = result.files.first;
+      final fileName = file.name;
       final bytes = file.bytes;
       if (bytes == null) {
         _showError('No se pudo leer el archivo seleccionado');
+        return;
+      }
+
+      // Extraer el nombre de la categoría del nombre del archivo
+      final categoryName = _extractCategoryName(fileName);
+      if (categoryName == null) {
+        _showError('El nombre del archivo no tiene el formato esperado (debe empezar con "Categoria")');
         return;
       }
 
@@ -165,6 +172,34 @@ class TeacherHomeController extends GetxController {
     } catch (e) {
       _showError('Error al abrir el archivo CSV: $e');
     }
+  }
+
+  String? _extractCategoryName(String fileName) {
+    // Remover la extensión .csv
+    final nameWithoutExt = fileName.replaceAll('.csv', '');
+    // Normalizar para verificar si empieza con "categoria" (ignorando tildes y mayúsculas)
+    final normalizedName = _normalizeText(nameWithoutExt.toLowerCase());
+    if (!normalizedName.startsWith('categoria')) {
+      return null;
+    }
+    return nameWithoutExt;
+  }
+
+  String _normalizeText(String text) {
+    // Reemplazar tildes
+    return text
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('Á', 'A')
+        .replaceAll('É', 'E')
+        .replaceAll('Í', 'I')
+        .replaceAll('Ó', 'O')
+        .replaceAll('Ú', 'U')
+        .replaceAll('ñ', 'n')
+        .replaceAll('Ñ', 'N');
   }
 
   bool isCsvProcessing(String courseId) {
@@ -216,7 +251,7 @@ class TeacherHomeController extends GetxController {
     required String title,
     DateTime? closesAt,
   }) async {
-    final teacherOwner = _primaryTeacherOwner;
+    final teacherOwner = primaryTeacherOwner;
     if (teacherOwner.isEmpty) {
       _showError('No se pudo identificar el profesor actual');
       return;

@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/theme.dart';
 import '../../../domain/entities/academic_entities.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../controllers/teacher_home_controller.dart';
@@ -271,7 +274,7 @@ class _CourseCard extends StatelessWidget {
                                 height: 18,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: Color(0xFFF76900),
+                                  color: AppColors.primary,
                                 ),
                               )
                             : const Icon(Icons.upload_file),
@@ -280,9 +283,9 @@ class _CourseCard extends StatelessWidget {
                         ),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: isProcessing
-                              ? Colors.grey
-                              : const Color(0xFF2D2D2D),
-                          side: const BorderSide(color: Color(0xFFCCCCCC)),
+                              ? AppColors.textSecondary
+                              : AppColors.primary,
+                          side: BorderSide(color: AppColors.primary.withOpacity(0.5)),
                         ),
                       ),
                     ),
@@ -296,44 +299,135 @@ class _CourseCard extends StatelessWidget {
     );
   }
 
-  void _openCategorySyncDialog(BuildContext context) {
-    final categoryCtrl = TextEditingController();
+  void _openCategorySyncDialog(BuildContext context) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['csv'],
+        withData: true,
+      );
 
-    showDialog<void>(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: const Text('Sincronizar categoría desde CSV'),
-          content: TextField(
-            controller: categoryCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Categoría (ej: CategoriaPyFlutter)',
-            ),
+      if (result == null || result.files.isEmpty) {
+        return;
+      }
+
+      final file = result.files.first;
+      final fileName = file.name;
+      final bytes = file.bytes;
+      if (bytes == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo leer el archivo seleccionado')),
+        );
+        return;
+      }
+
+      // Extraer el nombre de la categoría del nombre del archivo
+      final categoryName = _extractCategoryName(fileName);
+      if (categoryName == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('El nombre del archivo no tiene el formato esperado (debe empezar con "Categoria")')),
+        );
+        return;
+      }
+
+      // Mostrar diálogo de confirmación
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Confirmar importación'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Archivo: $fileName'),
+              const SizedBox(height: 8),
+              Text('Categoría detectada: $categoryName'),
+              const SizedBox(height: 16),
+              const Text('¿Desea continuar con la importación?'),
+            ],
           ),
           actions: [
             TextButton(
-              onPressed: () => Get.back(),
+              onPressed: () => Navigator.of(context).pop(false),
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
-              onPressed: () async {
-                final category = categoryCtrl.text.trim();
-                if (category.isEmpty) {
-                  return;
-                }
-
-                Get.back();
-                await controller.pickCsvAndSync(
-                  courseId: course.id,
-                  categoryName: category,
-                );
-              },
-              child: const Text('Seleccionar CSV'),
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Importar'),
             ),
           ],
+        ),
+      );
+
+      if (confirmed == true) {
+        final content = utf8.decode(bytes, allowMalformed: true);
+        await controller.syncCsvContent(
+          courseId: course.id,
+          categoryName: categoryName,
+          csvContent: content,
+          uploadedBy: controller.primaryTeacherOwner,
         );
-      },
-    );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al abrir el archivo CSV: $e')),
+      );
+    }
+  }
+
+  String? _extractCategoryName(String fileName) {
+    // Remover la extensión .csv (case-insensitive)
+    var nameWithoutExt = fileName;
+    if (nameWithoutExt.toLowerCase().endsWith('.csv')) {
+      nameWithoutExt = nameWithoutExt.substring(0, nameWithoutExt.length - 4);
+    }
+
+    // Normalizar para verificar si empieza con "categoria" (ignorando tildes y mayúsculas)
+    final normalizedName = _normalizeText(nameWithoutExt.toLowerCase());
+    if (!normalizedName.startsWith('categoria')) {
+      return null;
+    }
+
+    // Encontrar la posición de "categoria" en el nombre normalizado
+    final categoriaIndex = normalizedName.indexOf('categoria');
+    final categoriaLength = 'categoria'.length;
+
+    // Extraer la parte después de "categoria" usando el nombre original
+    final categoryPart = nameWithoutExt.substring(categoriaIndex + categoriaLength);
+    if (categoryPart.isEmpty) {
+      return null;
+    }
+
+    // Tomar texto hasta el primer guion bajo (ej: CategoriaPyFlutter_AllGroups -> PyFlutter)
+    final pieces = categoryPart.split('_');
+    final rawCategory = pieces.first.trim();
+    if (rawCategory.isEmpty) {
+      return null;
+    }
+
+    // Devolver el nombre de categoría original, respetando mayúsculas y tildes
+    return rawCategory;
+  }
+
+  String _normalizeText(String text) {
+    // Reemplazar tildes
+    return text
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('Á', 'A')
+        .replaceAll('É', 'E')
+        .replaceAll('Í', 'I')
+        .replaceAll('Ó', 'O')
+        .replaceAll('Ú', 'U')
+        .replaceAll('ñ', 'n')
+        .replaceAll('Ñ', 'N');
   }
 }
 

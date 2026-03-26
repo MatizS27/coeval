@@ -146,6 +146,22 @@ class AcademicRemoteDatasource {
     return false;
   }
 
+  Future<bool> _deleteRecords(
+    String tableName, {
+    required Map<String, dynamic> where,
+  }) async {
+    final uri = _dbUri('delete');
+    final payload = {'tableName': tableName, 'where': where};
+
+    final response = await http.post(
+      uri,
+      headers: _headers,
+      body: jsonEncode(payload),
+    );
+
+    return response.statusCode == 200 || response.statusCode == 201;
+  }
+
   Future<List<Map<String, dynamic>>> _readActiveEnrollmentsByGroupIds(
     Iterable<String> groupIds,
   ) async {
@@ -632,18 +648,34 @@ class AcademicRemoteDatasource {
         : _asString(user['_id']);
   }
 
+  String _normalizeCategoryString(String raw) {
+    var normalized = _csvParser.normalizeText(raw);
+
+    if (normalized.startsWith('categoria')) {
+      normalized = normalized.substring('categoria'.length);
+    }
+
+    if (normalized.contains('_')) {
+      // Usa la parte principal antes de primer underscore.
+      normalized = normalized.split('_').first;
+    }
+
+    return normalized;
+  }
+
   Future<CsvSyncResult> syncCategoryFromCsv({
     required String courseId,
     required String categoryName,
     required String csvContent,
     required String uploadedBy,
   }) async {
-    final normalizedCategory = _csvParser.normalizeText(categoryName);
-    final parsedRows = _csvParser.parseRows(csvContent)
-        .where(
-          (row) => _csvParser.normalizeText(row.categoryName) == normalizedCategory,
-        )
-        .toList();
+    final normalizedCategory = _normalizeCategoryString(categoryName);
+    final parsedRows = _csvParser.parseRows(csvContent).where((row) {
+      final rowCategory = _normalizeCategoryString(row.categoryName);
+
+      return rowCategory == normalizedCategory ||
+          rowCategory.contains(normalizedCategory);
+    }).toList();
 
     if (parsedRows.isEmpty) {
       throw RobleException(
