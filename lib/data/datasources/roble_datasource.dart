@@ -91,6 +91,10 @@ class AuthResult {
 }
 
 class RobleDatasource {
+  // Modificación Nivel 3: Cliente inyectable para pruebas de integración
+  // http.Client client = http.Client(); // Línea original comentada (simulada)
+  http.Client client = http.Client(); 
+
   final String dbName = RobleConfig.dbName;
   final String authUrl = RobleConfig.authBaseUrl;
   final String databaseUrl = RobleConfig.databaseBaseUrl;
@@ -120,7 +124,8 @@ class RobleDatasource {
     final url = Uri.parse('$authUrl/$dbName/signup-direct');
 
     try {
-      final response = await http.post(
+      // final response = await http.post( // Línea original
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({"email": email, "password": password, "name": name}),
@@ -173,7 +178,8 @@ class RobleDatasource {
       _log('SAVE_USER', 'URL: $url');
       _log('SAVE_USER', 'Body: $body');
 
-      final response = await http.post(url, headers: _authHeaders, body: body);
+      // final response = await http.post(url, headers: _authHeaders, body: body); // Línea original
+      final response = await client.post(url, headers: _authHeaders, body: body);
 
       _log('SAVE_USER', 'Status: ${response.statusCode}');
       _log('SAVE_USER', 'Response: ${response.body}');
@@ -235,7 +241,8 @@ class RobleDatasource {
       _log('LOGIN', 'URL: $url');
       _log('LOGIN', 'Request: $body');
 
-      final response = await http.post(
+      // final response = await http.post( // Línea original
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: body,
@@ -272,7 +279,8 @@ class RobleDatasource {
     try {
       _log('GET_USER', 'URL: $url');
 
-      final response = await http.get(url, headers: _authHeaders);
+      // final response = await http.get(url, headers: _authHeaders); // Línea original
+      final response = await client.get(url, headers: _authHeaders);
 
       _log('GET_USER', 'Status: ${response.statusCode}');
       _log('GET_USER', 'Body: ${response.body}');
@@ -310,7 +318,8 @@ class RobleDatasource {
     final url = Uri.parse('$authUrl/$dbName/logout');
 
     try {
-      final response = await http.post(url, headers: _authHeaders);
+      // final response = await http.post(url, headers: _authHeaders); // Línea original
+      final response = await client.post(url, headers: _authHeaders);
 
       _currentToken = null;
       return response.statusCode == 200;
@@ -326,7 +335,8 @@ class RobleDatasource {
     final url = Uri.parse('$authUrl/$dbName/verify-token');
 
     try {
-      final response = await http.get(url, headers: _authHeaders);
+      // final response = await http.get(url, headers: _authHeaders); // Línea original
+      final response = await client.get(url, headers: _authHeaders);
 
       return response.statusCode == 200;
     } catch (e) {
@@ -338,7 +348,8 @@ class RobleDatasource {
     final url = Uri.parse('$authUrl/$dbName/refresh-token');
 
     try {
-      final response = await http.post(
+      // final response = await http.post( // Línea original
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({"refreshToken": refreshToken}),
@@ -361,7 +372,8 @@ class RobleDatasource {
     final url = Uri.parse('$authUrl/$dbName/forgot-password');
 
     try {
-      final response = await http.post(
+      // final response = await http.post( // Línea original
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({"email": email}),
@@ -389,7 +401,8 @@ class RobleDatasource {
     final url = Uri.parse('$authUrl/$dbName/reset-password');
 
     try {
-      final response = await http.post(
+      // final response = await http.post( // Línea original
+      final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({"token": token, "newPassword": newPassword}),
