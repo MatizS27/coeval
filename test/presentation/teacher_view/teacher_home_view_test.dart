@@ -6,6 +6,7 @@ import 'package:coeval/presentation/teacher_view/views/teacher_home_view.dart';
 import 'package:coeval/presentation/teacher_view/controllers/teacher_home_controller.dart';
 import 'package:coeval/presentation/auth/controllers/auth_controller.dart';
 import 'package:coeval/domain/entities/academic_entities.dart';
+import 'package:coeval/data/datasources/roble_datasource.dart';
 import '../../mocks/mock_teacher_controller.dart';
 import '../../mocks/mock_auth_controller.dart';
 
@@ -17,14 +18,18 @@ void main() {
     mockTeacherController = MockTeacherHomeController();
     mockAuthController = MockAuthController();
 
-    // Setup Teacher Controller mocks
-    when(() => mockTeacherController.isLoading).thenReturn(false.obs);
-    when(() => mockTeacherController.courses).thenReturn(<TeacherCourseOverview>[].obs);
-    when(() => mockTeacherController.processingCsvCourseIds).thenReturn(<String>[].obs);
-    when(() => mockTeacherController.isCsvProcessing(any())).thenReturn(false);
+    // Configure AuthController with direct assignment
+    mockAuthController.isLoggedIn.value = true;
+    mockAuthController.currentUser.value = UserData(
+      id: '1',
+      uid: 'uid123',
+      email: 'teacher@uninorte.edu.co',
+      name: 'Teacher Test',
+      role: 'teacher',
+    );
 
-    // Setup Auth Controller mocks
-    when(() => mockAuthController.logout()).thenAnswer((_) async => {});
+    // Mock methods
+    when(() => mockAuthController.logout()).thenAnswer((_) async {});
 
     Get.put<TeacherHomeController>(mockTeacherController);
     Get.put<AuthController>(mockAuthController);
@@ -41,7 +46,8 @@ void main() {
     });
 
     testWidgets('Debe mostrar CircularProgressIndicator al cargar cursos', (WidgetTester tester) async {
-      when(() => mockTeacherController.isLoading).thenReturn(true.obs);
+      mockTeacherController.isLoading.value = true;
+      mockTeacherController.courses.clear();
 
       await tester.pumpWidget(const GetMaterialApp(home: TeacherHomeView()));
       
@@ -67,10 +73,10 @@ void main() {
         categories: [],
       );
 
-      when(() => mockTeacherController.courses).thenReturn(<TeacherCourseOverview>[mockCourse].obs);
+      mockTeacherController.courses.add(mockCourse);
 
       await tester.pumpWidget(const GetMaterialApp(home: TeacherHomeView()));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('Curso Docente Test'), findsOneWidget);
       expect(find.text('NRC 9988 · 202410'), findsOneWidget);
@@ -91,8 +97,10 @@ void main() {
 
     testWidgets('Debe llamar al logout del AuthController al pulsar el botón de salida', (WidgetTester tester) async {
       await tester.pumpWidget(const GetMaterialApp(home: TeacherHomeView()));
+      await tester.pump();
       
       await tester.tap(find.byIcon(Icons.logout));
+      await tester.pump();
       
       verify(() => mockAuthController.logout()).called(1);
     });

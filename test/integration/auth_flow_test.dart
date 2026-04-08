@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:coeval/presentation/auth/controllers/auth_controller.dart';
 import 'package:coeval/data/datasources/roble_datasource.dart';
 import 'package:coeval/data/datasources/auth_remote_datasource.dart';
@@ -14,7 +16,12 @@ void main() {
     late AuthController authController;
     late RobleDatasource robleDatasource;
 
-    setUp(() {
+    setUpAll(() {
+      TestWidgetsFlutterBinding.ensureInitialized();
+    });
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
       robleDatasource = RobleDatasource();
 
       robleDatasource.client = MockClient((request) async {
@@ -70,15 +77,25 @@ void main() {
     });
 
     tearDown(() async {
-      await Get.delete<AuthController>();
+      if (Get.isRegistered<AuthController>()) {
+        await Get.delete<AuthController>();
+      }
       Get.reset();
     });
 
-    test('Debe completar el login y actualizar el estado global del usuario', () async {
+    testWidgets('Debe completar el login y actualizar el estado global del usuario', (tester) async {
+      await tester.pumpWidget(
+        GetMaterialApp(
+          home: const Scaffold(body: Center(child: Text('Test'))),
+        ),
+      );
+
       authController.email.value = 'integracion@uninorte.edu.co';
       authController.password.value = '123456';
 
       await authController.login();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(robleDatasource.currentToken, 'fake_access_token');
       expect(authController.isLoggedIn.value, isTrue);

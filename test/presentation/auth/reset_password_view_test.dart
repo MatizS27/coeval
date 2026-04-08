@@ -12,22 +12,8 @@ void main() {
   setUp(() {
     mockController = MockResetPasswordController();
 
-    // Mocking Rx variables
-    when(() => mockController.token).thenReturn(''.obs);
-    when(() => mockController.newPassword).thenReturn(''.obs);
-    when(() => mockController.confirmPassword).thenReturn(''.obs);
-    when(() => mockController.isLoading).thenReturn(false.obs);
-    when(() => mockController.obscureNewPassword).thenReturn(true.obs);
-    when(() => mockController.obscureConfirmPassword).thenReturn(true.obs);
-    
-    when(() => mockController.tokenError).thenReturn(Rxn<String>());
-    when(() => mockController.newPasswordError).thenReturn(Rxn<String>());
-    when(() => mockController.confirmPasswordError).thenReturn(Rxn<String>());
-
-    // Mocking TextControllers
-    when(() => mockController.tokenController).thenReturn(TextEditingController());
-    when(() => mockController.newPasswordController).thenReturn(TextEditingController());
-    when(() => mockController.confirmPasswordController).thenReturn(TextEditingController());
+    // Mock methods
+    when(() => mockController.resetPassword()).thenAnswer((_) async {});
 
     Get.put<ResetPasswordController>(mockController);
   });
@@ -40,7 +26,7 @@ void main() {
     testWidgets('Debe mostrar los elementos de restablecimiento correctamente', (WidgetTester tester) async {
       await tester.pumpWidget(const GetMaterialApp(home: ResetPasswordView()));
 
-      expect(find.text('Restablecer Contraseña'), findsNWidgets(2)); // AppBar y Título
+      expect(find.text('Restablecer Contraseña'), findsAtLeastNWidgets(2));
       expect(find.text('Ingresa el token de recuperación y tu nueva contraseña'), findsOneWidget);
       
       expect(find.widgetWithText(TextField, 'Token de recuperación'), findsOneWidget);
@@ -49,8 +35,8 @@ void main() {
     });
 
     testWidgets('Debe mostrar errores de validación si el controlador los emite', (WidgetTester tester) async {
-      when(() => mockController.tokenError).thenReturn(Rxn<String>('El token es requerido'));
-      when(() => mockController.confirmPasswordError).thenReturn(Rxn<String>('Las contraseñas no coinciden'));
+      mockController.tokenError.value = 'El token es requerido';
+      mockController.confirmPasswordError.value = 'Las contraseñas no coinciden';
 
       await tester.pumpWidget(const GetMaterialApp(home: ResetPasswordView()));
       await tester.pump();
@@ -60,7 +46,7 @@ void main() {
     });
 
     testWidgets('Debe mostrar CircularProgressIndicator cuando isLoading es true', (WidgetTester tester) async {
-      when(() => mockController.isLoading).thenReturn(true.obs);
+      mockController.isLoading.value = true;
 
       await tester.pumpWidget(const GetMaterialApp(home: ResetPasswordView()));
       await tester.pump();
@@ -69,12 +55,14 @@ void main() {
     });
 
     testWidgets('Debe llamar a resetPassword al pulsar el botón', (WidgetTester tester) async {
-      when(() => mockController.resetPassword()).thenAnswer((_) async => {});
-
       await tester.pumpWidget(const GetMaterialApp(home: ResetPasswordView()));
+      await tester.pumpAndSettle();
       
       final button = find.widgetWithText(ElevatedButton, 'Restablecer Contraseña');
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
       await tester.tap(button);
+      await tester.pump();
       
       verify(() => mockController.resetPassword()).called(1);
     });

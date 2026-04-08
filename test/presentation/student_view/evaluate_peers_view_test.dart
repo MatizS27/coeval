@@ -94,12 +94,13 @@ void main() {
       // Pulsar el botón de enviar para el primer compañero
       final submitButtons = find.widgetWithText(ElevatedButton, 'Enviar Evaluación');
       await tester.tap(submitButtons.first);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 3));
 
       verify(() => mockController.submitEvaluation(
         cycleId: 'cycle1',
         evaluateeUid: 'u1',
-        scores: [3, 3], // Valores por defecto
+        scores: [3, 3],
         comments: null,
       )).called(1);
     });

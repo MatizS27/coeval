@@ -69,9 +69,15 @@ void main() {
       await tester.pumpWidget(GetMaterialApp(
         home: TeacherCourseDetailView(course: testCourse),
       ));
+      await tester.pumpAndSettle();
 
       expect(find.text('Sprint 1'), findsOneWidget);
-      expect(find.textContaining('DevTeam 1'), findsOneWidget);
+      
+      // Expand the category ExpansionTile to see the groups
+      await tester.tap(find.text('Sprint 1'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('DevTeam 1'), findsOneWidget);
     });
 
     testWidgets('Debe mostrar mensaje cuando no hay evaluaciones en la pestaña correspondiente', (WidgetTester tester) async {

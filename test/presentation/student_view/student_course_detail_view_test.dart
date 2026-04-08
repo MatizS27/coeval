@@ -57,16 +57,17 @@ void main() {
     mockStudentController = MockStudentHomeController();
     mockAuthController = MockAuthController();
 
-    // Mocking AuthController
-    when(() => mockAuthController.currentUser).thenReturn(Rxn<UserData>(UserData(
+    // Configure AuthController with direct assignment
+    mockAuthController.isLoggedIn.value = true;
+    mockAuthController.currentUser.value = UserData(
       id: 'me-id',
       uid: 'me-uid',
       email: 'yo@uninorte.edu.co',
       name: 'Yo Estudiante',
       role: 'student',
-    )));
+    );
 
-    // Mocking StudentHomeController
+    // Mock methods
     when(() => mockStudentController.getPendingEvaluations()).thenAnswer((_) async => []);
 
     Get.put<AuthController>(mockAuthController);
