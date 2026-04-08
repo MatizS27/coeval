@@ -58,16 +58,18 @@ class AcademicRepositoryImpl implements AcademicRepository {
   @override
   Future<EvaluationCycleData?> createEvaluationCycle({
     required String courseId,
-    required String categoryId,
+    required String groupId,
     required String title,
     required String openedBy,
+    required List<String> rubrics,
     DateTime? closesAt,
   }) {
     return _remoteDatasource.createEvaluationCycle(
       courseId: courseId,
-      categoryId: categoryId,
+      groupId: groupId,
       title: title,
       openedBy: openedBy,
+      rubrics: rubrics,
       closesAt: closesAt,
     );
   }
@@ -77,15 +79,51 @@ class AcademicRepositoryImpl implements AcademicRepository {
     required String cycleId,
     required String evaluatorUid,
     required String evaluateeUid,
-    required double scoreTotal,
+    required List<int> scores,
     String? comments,
   }) {
     return _remoteDatasource.submitEvaluation(
       cycleId: cycleId,
       evaluatorUid: evaluatorUid,
       evaluateeUid: evaluateeUid,
-      scoreTotal: scoreTotal,
+      scores: scores,
       comments: comments,
+    );
+  }
+
+  @override
+  Future<List<EvaluationCycleData>> getEvaluationCyclesByCourse(
+    String courseId,
+  ) {
+    return _remoteDatasource.getEvaluationCyclesByCourse(courseId);
+  }
+
+  @override
+  Future<List<EvaluationCycleData>> getEvaluationCyclesByGroup(
+    String groupId,
+  ) {
+    return _remoteDatasource.getEvaluationCyclesByGroup(groupId);
+  }
+
+  @override
+  Future<List<PendingEvaluationInfo>> getPendingEvaluationsForStudent({
+    required String studentUid,
+    required String studentEmail,
+  }) {
+    return _remoteDatasource.getPendingEvaluationsForStudent(
+      studentUid: studentUid,
+      studentEmail: studentEmail,
+    );
+  }
+
+  @override
+  Future<List<PeerEvaluationData>> getSubmittedEvaluations({
+    required String cycleId,
+    required String evaluatorUid,
+  }) {
+    return _remoteDatasource.getSubmittedEvaluations(
+      cycleId: cycleId,
+      evaluatorUid: evaluatorUid,
     );
   }
 }

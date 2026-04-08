@@ -74,16 +74,18 @@ class CreateEvaluationCycleUseCase {
 
   Future<EvaluationCycleData?> call({
     required String courseId,
-    required String categoryId,
+    required String groupId,
     required String title,
     required String openedBy,
+    required List<String> rubrics,
     DateTime? closesAt,
   }) {
     return _repository.createEvaluationCycle(
       courseId: courseId,
-      categoryId: categoryId,
+      groupId: groupId,
       title: title,
       openedBy: openedBy,
+      rubrics: rubrics,
       closesAt: closesAt,
     );
   }
@@ -98,15 +100,67 @@ class SubmitEvaluationUseCase {
     required String cycleId,
     required String evaluatorUid,
     required String evaluateeUid,
-    required double scoreTotal,
+    required List<int> scores,
     String? comments,
   }) {
     return _repository.submitEvaluation(
       cycleId: cycleId,
       evaluatorUid: evaluatorUid,
       evaluateeUid: evaluateeUid,
-      scoreTotal: scoreTotal,
+      scores: scores,
       comments: comments,
+    );
+  }
+}
+
+class GetEvaluationCyclesByCourseUseCase {
+  final AcademicRepository _repository;
+
+  GetEvaluationCyclesByCourseUseCase(this._repository);
+
+  Future<List<EvaluationCycleData>> call(String courseId) {
+    return _repository.getEvaluationCyclesByCourse(courseId);
+  }
+}
+
+class GetEvaluationCyclesByGroupUseCase {
+  final AcademicRepository _repository;
+
+  GetEvaluationCyclesByGroupUseCase(this._repository);
+
+  Future<List<EvaluationCycleData>> call(String groupId) {
+    return _repository.getEvaluationCyclesByGroup(groupId);
+  }
+}
+
+class GetPendingEvaluationsForStudentUseCase {
+  final AcademicRepository _repository;
+
+  GetPendingEvaluationsForStudentUseCase(this._repository);
+
+  Future<List<PendingEvaluationInfo>> call({
+    required String studentUid,
+    required String studentEmail,
+  }) {
+    return _repository.getPendingEvaluationsForStudent(
+      studentUid: studentUid,
+      studentEmail: studentEmail,
+    );
+  }
+}
+
+class GetSubmittedEvaluationsUseCase {
+  final AcademicRepository _repository;
+
+  GetSubmittedEvaluationsUseCase(this._repository);
+
+  Future<List<PeerEvaluationData>> call({
+    required String cycleId,
+    required String evaluatorUid,
+  }) {
+    return _repository.getSubmittedEvaluations(
+      cycleId: cycleId,
+      evaluatorUid: evaluatorUid,
     );
   }
 }

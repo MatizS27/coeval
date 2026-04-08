@@ -26,9 +26,10 @@ abstract class AcademicRepository {
 
   Future<EvaluationCycleData?> createEvaluationCycle({
     required String courseId,
-    required String categoryId,
+    required String groupId,
     required String title,
     required String openedBy,
+    required List<String> rubrics,
     DateTime? closesAt,
   });
 
@@ -36,7 +37,25 @@ abstract class AcademicRepository {
     required String cycleId,
     required String evaluatorUid,
     required String evaluateeUid,
-    required double scoreTotal,
+    required List<int> scores,
     String? comments,
+  });
+
+  Future<List<EvaluationCycleData>> getEvaluationCyclesByCourse(
+    String courseId,
+  );
+
+  Future<List<EvaluationCycleData>> getEvaluationCyclesByGroup(
+    String groupId,
+  );
+
+  Future<List<PendingEvaluationInfo>> getPendingEvaluationsForStudent({
+    required String studentUid,
+    required String studentEmail,
+  });
+
+  Future<List<PeerEvaluationData>> getSubmittedEvaluations({
+    required String cycleId,
+    required String evaluatorUid,
   });
 }

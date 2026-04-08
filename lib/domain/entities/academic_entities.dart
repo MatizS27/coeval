@@ -80,16 +80,73 @@ class CsvSyncResult {
 
 class EvaluationCycleData {
   final String id;
+  final String courseId;
+  final String groupId;
   final String title;
   final String status;
+  final String openedBy;
   final DateTime openedAt;
   final DateTime? closesAt;
+  final List<String> rubrics;
 
   EvaluationCycleData({
     required this.id,
+    required this.courseId,
+    required this.groupId,
     required this.title,
     required this.status,
+    required this.openedBy,
     required this.openedAt,
-    required this.closesAt,
+    this.closesAt,
+    this.rubrics = const [],
   });
+
+  bool get isOpen => status.toLowerCase() == 'open';
+  bool get isClosed => status.toLowerCase() == 'closed';
+}
+
+class PeerEvaluationData {
+  final String id;
+  final String cycleId;
+  final String evaluatorUid;
+  final String evaluateeUid;
+  final List<int> scores;
+  final String? comments;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+
+  PeerEvaluationData({
+    required this.id,
+    required this.cycleId,
+    required this.evaluatorUid,
+    required this.evaluateeUid,
+    required this.scores,
+    this.comments,
+    required this.createdAt,
+    this.updatedAt,
+  });
+
+  double get averageScore {
+    if (scores.isEmpty) return 0;
+    return scores.reduce((a, b) => a + b) / scores.length;
+  }
+}
+
+class PendingEvaluationInfo {
+  final EvaluationCycleData cycle;
+  final GroupOverview group;
+  final String categoryName;
+  final List<StudentOverview> peersToEvaluate;
+  final List<String> alreadyEvaluatedUids;
+
+  PendingEvaluationInfo({
+    required this.cycle,
+    required this.group,
+    required this.categoryName,
+    required this.peersToEvaluate,
+    required this.alreadyEvaluatedUids,
+  });
+
+  int get pendingCount => peersToEvaluate.length - alreadyEvaluatedUids.length;
+  bool get isComplete => pendingCount <= 0;
 }

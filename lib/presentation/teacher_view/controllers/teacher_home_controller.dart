@@ -14,6 +14,7 @@ class TeacherHomeController extends GetxController {
   final GetTeacherCourseOverviewsUseCase _getTeacherCourseOverviewsUseCase;
   final SyncCategoryFromCsvUseCase _syncCategoryFromCsvUseCase;
   final CreateEvaluationCycleUseCase _createEvaluationCycleUseCase;
+  final GetEvaluationCyclesByCourseUseCase _getEvaluationCyclesByCourseUseCase;
 
   TeacherHomeController({
     required AuthController authController,
@@ -21,11 +22,13 @@ class TeacherHomeController extends GetxController {
     required GetTeacherCourseOverviewsUseCase getTeacherCourseOverviewsUseCase,
     required SyncCategoryFromCsvUseCase syncCategoryFromCsvUseCase,
     required CreateEvaluationCycleUseCase createEvaluationCycleUseCase,
+    required GetEvaluationCyclesByCourseUseCase getEvaluationCyclesByCourseUseCase,
   }) : _authController = authController,
        _createCourseUseCase = createCourseUseCase,
        _getTeacherCourseOverviewsUseCase = getTeacherCourseOverviewsUseCase,
        _syncCategoryFromCsvUseCase = syncCategoryFromCsvUseCase,
-       _createEvaluationCycleUseCase = createEvaluationCycleUseCase;
+       _createEvaluationCycleUseCase = createEvaluationCycleUseCase,
+       _getEvaluationCyclesByCourseUseCase = getEvaluationCyclesByCourseUseCase;
 
   final isLoading = false.obs;
   final courses = <TeacherCourseOverview>[].obs;
@@ -247,8 +250,9 @@ class TeacherHomeController extends GetxController {
 
   Future<void> createEvaluationCycle({
     required String courseId,
-    required String categoryId,
+    required String groupId,
     required String title,
+    required List<String> rubrics,
     DateTime? closesAt,
   }) async {
     final teacherOwner = primaryTeacherOwner;
@@ -261,9 +265,10 @@ class TeacherHomeController extends GetxController {
     try {
       final cycle = await _createEvaluationCycleUseCase(
         courseId: courseId,
-        categoryId: categoryId,
+        groupId: groupId,
         title: title,
         openedBy: teacherOwner,
+        rubrics: rubrics,
         closesAt: closesAt,
       );
 
@@ -277,6 +282,17 @@ class TeacherHomeController extends GetxController {
       _showError('No se pudo abrir la coevaluación: $e');
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<List<EvaluationCycleData>> getEvaluationCyclesByCourse(
+    String courseId,
+  ) async {
+    try {
+      return await _getEvaluationCyclesByCourseUseCase(courseId);
+    } catch (e) {
+      _showError('Error al cargar evaluaciones: $e');
+      return [];
     }
   }
 

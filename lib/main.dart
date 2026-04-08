@@ -73,6 +73,9 @@ void main() {
       createEvaluationCycleUseCase: CreateEvaluationCycleUseCase(
         academicRepository,
       ),
+      getEvaluationCyclesByCourseUseCase: GetEvaluationCyclesByCourseUseCase(
+        academicRepository,
+      ),
     ),
     permanent: true,
   );
@@ -81,6 +84,12 @@ void main() {
     StudentHomeController(
       authController: authController,
       getStudentCourseOverviewsUseCase: GetStudentCourseOverviewsUseCase(
+        academicRepository,
+      ),
+      getPendingEvaluationsUseCase: GetPendingEvaluationsForStudentUseCase(
+        academicRepository,
+      ),
+      submitEvaluationUseCase: SubmitEvaluationUseCase(
         academicRepository,
       ),
     ),

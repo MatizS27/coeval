@@ -876,20 +876,23 @@ class AcademicRemoteDatasource {
 
   Future<EvaluationCycleData?> createEvaluationCycle({
     required String courseId,
-    required String categoryId,
+    required String groupId,
     required String title,
     required String openedBy,
+    required List<String> rubrics,
     DateTime? closesAt,
   }) async {
     final now = DateTime.now().toUtc();
+    
     final inserted = await _insertRecord(_evaluationCyclesTable, {
       'courseId': courseId,
-      'categoryId': categoryId,
+      'groupId': groupId,
       'title': title,
       'openedBy': openedBy,
       'openedAt': now.toIso8601String(),
-      'closesAt': closesAt?.toUtc().toIso8601String(),
+      'closeAt': closesAt?.toUtc().toIso8601String(),
       'status': 'open',
+      'criteria': {'rubrics': rubrics},
     });
 
     if (inserted == null) {
@@ -898,20 +901,293 @@ class AcademicRemoteDatasource {
 
     return EvaluationCycleData(
       id: _asString(inserted['_id']),
+      courseId: _asString(inserted['courseId']),
+      groupId: _asString(inserted['groupId']),
       title: _asString(inserted['title']),
       status: _asString(inserted['status']),
+      openedBy: _asString(inserted['openedBy']),
       openedAt: _parseDate(inserted['openedAt']),
-      closesAt: inserted['closesAt'] == null
+      closesAt: inserted['closeAt'] == null
           ? null
-          : _parseDate(inserted['closesAt']),
+          : _parseDate(inserted['closeAt']),
+      rubrics: rubrics,
     );
+  }
+
+  Future<List<EvaluationCycleData>> getEvaluationCyclesByCourse(
+    String courseId,
+  ) async {
+    final rows = await _readTable(
+      _evaluationCyclesTable,
+      filters: {'courseId': courseId},
+    );
+
+    return rows.map((row) => _mapRowToEvaluationCycle(row)).toList();
+  }
+
+  Future<List<EvaluationCycleData>> getEvaluationCyclesByGroup(
+    String groupId,
+  ) async {
+    final rows = await _readTable(
+      _evaluationCyclesTable,
+      filters: {'groupId': groupId},
+    );
+
+    return rows.map((row) => _mapRowToEvaluationCycle(row)).toList();
+  }
+
+  EvaluationCycleData _mapRowToEvaluationCycle(Map<String, dynamic> row) {
+    List<String> rubrics = [];
+    final criteriaRaw = row['criteria'];
+    if (criteriaRaw != null) {
+      try {
+        Map<String, dynamic> criteriaMap;
+        if (criteriaRaw is String) {
+          criteriaMap = jsonDecode(criteriaRaw);
+        } else if (criteriaRaw is Map) {
+          criteriaMap = Map<String, dynamic>.from(criteriaRaw);
+        } else {
+          criteriaMap = {};
+        }
+        if (criteriaMap['rubrics'] is List) {
+          rubrics = (criteriaMap['rubrics'] as List)
+              .map((e) => e.toString())
+              .toList();
+        }
+      } catch (_) {
+        rubrics = [];
+      }
+    }
+
+    return EvaluationCycleData(
+      id: _asString(row['_id']),
+      courseId: _asString(row['courseId']),
+      groupId: _asString(row['groupId']),
+      title: _asString(row['title']),
+      status: _asString(row['status']),
+      openedBy: _asString(row['openedBy']),
+      openedAt: _parseDate(row['openedAt']),
+      closesAt: row['closeAt'] == null ? null : _parseDate(row['closeAt']),
+      rubrics: rubrics,
+    );
+  }
+
+  Future<List<PeerEvaluationData>> getSubmittedEvaluations({
+    required String cycleId,
+    required String evaluatorUid,
+  }) async {
+    final rows = await _readTable(
+      _evaluationsTable,
+      filters: {'cycleId': cycleId, 'evaluatorUid': evaluatorUid},
+    );
+
+    return rows.map((row) => _mapRowToPeerEvaluation(row)).toList();
+  }
+
+  PeerEvaluationData _mapRowToPeerEvaluation(Map<String, dynamic> row) {
+    List<int> scores = [];
+    final resultsRaw = row['results'];
+    if (resultsRaw != null) {
+      try {
+        Map<String, dynamic> resultsMap;
+        if (resultsRaw is String) {
+          resultsMap = jsonDecode(resultsRaw);
+        } else if (resultsRaw is Map) {
+          resultsMap = Map<String, dynamic>.from(resultsRaw);
+        } else {
+          resultsMap = {};
+        }
+        if (resultsMap['scores'] is List) {
+          scores = (resultsMap['scores'] as List)
+              .map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0)
+              .toList();
+        }
+      } catch (_) {
+        scores = [];
+      }
+    }
+
+    return PeerEvaluationData(
+      id: _asString(row['_id']),
+      cycleId: _asString(row['cycleId']),
+      evaluatorUid: _asString(row['evaluatorUid']),
+      evaluateeUid: _asString(row['evaluateeUid']),
+      scores: scores,
+      comments: _asString(row['comments']).isEmpty 
+          ? null 
+          : _asString(row['comments']),
+      createdAt: _parseDate(row['createdAt']),
+      updatedAt: row['updatedAt'] == null ? null : _parseDate(row['updatedAt']),
+    );
+  }
+
+  Future<List<PendingEvaluationInfo>> getPendingEvaluationsForStudent({
+    required String studentUid,
+    required String studentEmail,
+  }) async {
+    final normalizedEmail = studentEmail.trim().toLowerCase();
+    final normalizedUid = studentUid.trim();
+
+    final enrollmentsByEmail = await _readTable(
+      _enrollmentsTable,
+      filters: {'studentEmail': normalizedEmail, 'isActive': true},
+    );
+
+    final enrollmentsByUid = <Map<String, dynamic>>[];
+    if (normalizedUid.isNotEmpty) {
+      final byUId = await _readTable(
+        _enrollmentsTable,
+        filters: {'studentUId': normalizedUid, 'isActive': true},
+      );
+      enrollmentsByUid.addAll(byUId);
+
+      if (byUId.isEmpty) {
+        final byUid = await _readTable(
+          _enrollmentsTable,
+          filters: {'studentUid': normalizedUid, 'isActive': true},
+        );
+        enrollmentsByUid.addAll(byUid);
+      }
+    }
+
+    final enrollmentMap = <String, Map<String, dynamic>>{};
+    for (final row in [...enrollmentsByEmail, ...enrollmentsByUid]) {
+      final rowId = _asString(row['_id']);
+      if (rowId.isNotEmpty) {
+        enrollmentMap[rowId] = row;
+      }
+    }
+
+    if (enrollmentMap.isEmpty) {
+      return [];
+    }
+
+    final groupIds = enrollmentMap.values
+        .map((e) => _asString(e['groupId']))
+        .where((id) => id.isNotEmpty)
+        .toSet();
+
+    if (groupIds.isEmpty) {
+      return [];
+    }
+
+    final groupsById = <String, Map<String, dynamic>>{};
+    final categoryIds = <String>{};
+    for (final groupId in groupIds) {
+      final rows = await _readTable(_groupsTable, filters: {'_id': groupId});
+      if (rows.isNotEmpty) {
+        groupsById[groupId] = rows.first;
+        final catId = _asString(rows.first['categoryId']);
+        if (catId.isNotEmpty) {
+          categoryIds.add(catId);
+        }
+      }
+    }
+
+    final categoriesById = <String, Map<String, dynamic>>{};
+    for (final catId in categoryIds) {
+      final rows = await _readTable(_categoriesTable, filters: {'_id': catId});
+      if (rows.isNotEmpty) {
+        categoriesById[catId] = rows.first;
+      }
+    }
+
+    final openCycles = <EvaluationCycleData>[];
+    for (final groupId in groupIds) {
+      final cycleRows = await _readTable(
+        _evaluationCyclesTable,
+        filters: {'groupId': groupId, 'status': 'open'},
+      );
+      openCycles.addAll(cycleRows.map((r) => _mapRowToEvaluationCycle(r)));
+    }
+
+    if (openCycles.isEmpty) {
+      return [];
+    }
+
+    final result = <PendingEvaluationInfo>[];
+
+    for (final cycle in openCycles) {
+      final groupId = cycle.groupId;
+      final groupData = groupsById[groupId];
+      
+      if (groupData == null) {
+        continue;
+      }
+
+      final categoryId = _asString(groupData['categoryId']);
+      final category = categoriesById[categoryId];
+      final categoryName = category != null 
+          ? _asString(category['name']) 
+          : '';
+
+      final activeEnrollments = await _readActiveEnrollmentsByGroupIds([groupId]);
+
+      final students = activeEnrollments.map((enrollment) {
+        return StudentOverview(
+          uid: _asString(enrollment['studentUId']).isNotEmpty
+              ? _asString(enrollment['studentUId'])
+              : _asString(enrollment['studentUid']),
+          name: _asString(enrollment['studentName']),
+          email: _asString(enrollment['studentEmail']),
+          studentId: _asString(enrollment['studentId']),
+        );
+      }).toList();
+
+      final peersToEvaluate = students.where((s) {
+        final sEmail = s.email.trim().toLowerCase();
+        final sUid = s.uid.trim();
+        return sEmail != normalizedEmail && 
+               (normalizedUid.isEmpty || sUid != normalizedUid);
+      }).toList();
+
+      if (peersToEvaluate.isEmpty) {
+        continue;
+      }
+
+      final submittedEvals = await getSubmittedEvaluations(
+        cycleId: cycle.id,
+        evaluatorUid: normalizedUid.isNotEmpty ? normalizedUid : 'email:$normalizedEmail',
+      );
+      final alreadyEvaluatedUids = submittedEvals
+          .map((e) => e.evaluateeUid)
+          .toSet()
+          .toList();
+
+      final groupCode = _asString(groupData['groupName']).isNotEmpty
+          ? _asString(groupData['groupName'])
+          : _asString(groupData['groupCode']);
+      final displayName = _asString(groupData['displayName']).isNotEmpty
+          ? _asString(groupData['displayName'])
+          : (_asString(groupData['name']).isNotEmpty
+                ? _asString(groupData['name'])
+                : groupCode);
+
+      final groupOverview = GroupOverview(
+        id: groupId,
+        code: groupCode,
+        name: displayName,
+        activeStudentsCount: students.length,
+        students: students,
+      );
+
+      result.add(PendingEvaluationInfo(
+        cycle: cycle,
+        group: groupOverview,
+        categoryName: categoryName,
+        peersToEvaluate: peersToEvaluate,
+        alreadyEvaluatedUids: alreadyEvaluatedUids,
+      ));
+    }
+
+    return result;
   }
 
   Future<bool> submitEvaluation({
     required String cycleId,
     required String evaluatorUid,
     required String evaluateeUid,
-    required double scoreTotal,
+    required List<int> scores,
     String? comments,
   }) async {
     final cycles = await _readTable(
@@ -928,26 +1204,16 @@ class AcademicRemoteDatasource {
       throw RobleException('El ciclo está cerrado');
     }
 
-    final courseId = _asString(cycle['courseId']);
-    final categoryId = _asString(cycle['categoryId']);
+    final groupId = _asString(cycle['groupId']);
     final nowIso = DateTime.now().toUtc().toIso8601String();
-
-    final groupsInCategory = await _readTable(
-      _groupsTable,
-      filters: {'courseId': courseId, 'categoryId': categoryId},
-    );
-    final groupIdsInCategory = groupsInCategory
-        .map((row) => _asString(row['_id']))
-        .where((id) => id.isNotEmpty)
-        .toSet();
 
     final evaluatorEnrollment = await _findActiveStudentInGroups(
       studentUid: evaluatorUid,
-      groupIds: groupIdsInCategory,
+      groupIds: [groupId],
     );
     final evaluateeEnrollment = await _findActiveStudentInGroups(
       studentUid: evaluateeUid,
-      groupIds: groupIdsInCategory,
+      groupIds: [groupId],
     );
 
     final existing = await _readTable(
@@ -963,7 +1229,7 @@ class AcademicRemoteDatasource {
       'cycleId': cycleId,
       'evaluatorUid': evaluatorUid,
       'evaluateeUid': evaluateeUid,
-      'scoreTotal': scoreTotal,
+      'results': {'scores': scores},
       'comments': comments ?? '',
       'updatedAt': nowIso,
       'evaluatorGroupIdAtEval': evaluatorEnrollment.isEmpty
