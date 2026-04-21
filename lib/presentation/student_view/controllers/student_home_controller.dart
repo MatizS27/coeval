@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/utils/app_cache.dart';
 import '../../../domain/entities/academic_entities.dart';
 import '../../../domain/usecases/academic_use_cases.dart';
 import '../../auth/controllers/auth_controller.dart';
@@ -32,6 +33,9 @@ class StudentHomeController extends GetxController {
   String get _studentUid =>
       (_authController.currentUser.value?.uid ?? 
        _authController.currentUser.value?.id ?? '').trim();
+
+    String get _studentCacheKey =>
+      _studentUid.isNotEmpty ? _studentUid : _studentEmail;
 
   @override
   void onInit() {
@@ -76,13 +80,21 @@ class StudentHomeController extends GetxController {
       return;
     }
 
+    final cacheKey = uid.isNotEmpty ? uid : email;
+
     isLoading.value = true;
     try {
+      final cached = await AppCache.instance.getStudentCourses(cacheKey);
+      if (cached != null && cached.isNotEmpty) {
+        courses.assignAll(cached);
+      }
+
       final result = await _getStudentCourseOverviewsUseCase(
         studentEmail: email,
         studentUid: uid.isEmpty ? null : uid,
       );
       courses.assignAll(result);
+      await AppCache.instance.setStudentCourses(cacheKey, result);
     } finally {
       isLoading.value = false;
     }
@@ -95,11 +107,26 @@ class StudentHomeController extends GetxController {
     }
 
     try {
+      if (_studentCacheKey.isNotEmpty) {
+        final cached = await AppCache.instance.getPendingEvaluations(
+          _studentCacheKey,
+        );
+        if (cached != null && cached.isNotEmpty) {
+          pendingEvaluations.assignAll(cached);
+        }
+      }
+
       final result = await _getPendingEvaluationsUseCase(
         studentEmail: _studentEmail,
         studentUid: _studentUid,
       );
       pendingEvaluations.assignAll(result);
+      if (_studentCacheKey.isNotEmpty) {
+        await AppCache.instance.setPendingEvaluations(
+          _studentCacheKey,
+          result,
+        );
+      }
     } catch (e) {
       _showError('Error al cargar evaluaciones pendientes');
     }
@@ -111,6 +138,15 @@ class StudentHomeController extends GetxController {
     }
 
     try {
+      if (_studentCacheKey.isNotEmpty) {
+        final cached = await AppCache.instance.getPendingEvaluations(
+          _studentCacheKey,
+        );
+        if (cached != null && cached.isNotEmpty) {
+          pendingEvaluations.assignAll(cached);
+        }
+      }
+
       return await _getPendingEvaluationsUseCase(
         studentEmail: _studentEmail,
         studentUid: _studentUid,
@@ -142,6 +178,17 @@ class StudentHomeController extends GetxController {
 
       if (!success) {
         _showError('No se pudo enviar la evaluación');
+      } else {
+        if (_studentCacheKey.isNotEmpty) {
+          await AppCache.instance.invalidatePendingEvaluations(
+            _studentCacheKey,
+          );
+        }
+        await AppCache.instance.invalidateTeacherDashboardCycle(cycleId);
+        if (_studentUid.isNotEmpty) {
+          await AppCache.instance.invalidateStudentDashboard(_studentUid);
+        }
+        await loadPendingEvaluations();
       }
 
       return success;

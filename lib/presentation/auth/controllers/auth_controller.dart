@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/utils/app_cache.dart';
 import '../../../data/datasources/roble_datasource.dart';
 import '../../../domain/usecases/login_use_case.dart';
 
@@ -147,6 +148,7 @@ class AuthController extends GetxController {
     _setTokenUseCase(null);
     currentUser.value = null;
     isLoggedIn.value = false;
+    await AppCache.instance.clearAll();
   }
 
   void prepareForLogin() {

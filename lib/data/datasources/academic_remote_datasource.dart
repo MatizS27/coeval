@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 
 import '../../domain/entities/academic_entities.dart';
 import 'academic_csv_parser.dart';
@@ -64,7 +63,10 @@ class AcademicRemoteDatasource {
       });
     }
 
-    final response = await http.get(_dbUri('read', query), headers: _headers);
+    final response = await _robleDatasource.client.get(
+      _dbUri('read', query),
+      headers: _headers,
+    );
 
     if (response.statusCode != 200) {
       return [];
@@ -95,7 +97,7 @@ class AcademicRemoteDatasource {
     String tableName,
     Map<String, dynamic> record,
   ) async {
-    final response = await http.post(
+    final response = await _robleDatasource.client.post(
       _dbUri('insert'),
       headers: _headers,
       body: jsonEncode({
@@ -132,7 +134,7 @@ class AcademicRemoteDatasource {
     ];
 
     for (final payload in payloads) {
-      final response = await http.post(
+      final response = await _robleDatasource.client.post(
         uri,
         headers: _headers,
         body: jsonEncode(payload),
@@ -153,7 +155,7 @@ class AcademicRemoteDatasource {
     final uri = _dbUri('delete');
     final payload = {'tableName': tableName, 'where': where};
 
-    final response = await http.post(
+    final response = await _robleDatasource.client.post(
       uri,
       headers: _headers,
       body: jsonEncode(payload),
@@ -976,12 +978,28 @@ class AcademicRemoteDatasource {
     required String cycleId,
     required String evaluatorUid,
   }) async {
-    final rows = await _readTable(
+    final rowsByEvaluatorUid = await _readTable(
       _evaluationsTable,
       filters: {'cycleId': cycleId, 'evaluatorUid': evaluatorUid},
     );
 
-    return rows.map((row) => _mapRowToPeerEvaluation(row)).toList();
+    final rowsByEvaluatorUId = rowsByEvaluatorUid.isEmpty
+        ? await _readTable(
+            _evaluationsTable,
+            filters: {'cycleId': cycleId, 'evaluatorUId': evaluatorUid},
+          )
+        : <Map<String, dynamic>>[];
+
+    final unique = <String, Map<String, dynamic>>{};
+    for (final row in [...rowsByEvaluatorUid, ...rowsByEvaluatorUId]) {
+      final rowId = _asString(row['_id']);
+      final key = rowId.isNotEmpty
+          ? rowId
+          : '${_asString(row['cycleId'])}-${_asString(row['evaluatorUid'])}-${_asString(row['evaluateeUid'])}';
+      unique[key] = row;
+    }
+
+    return unique.values.map((row) => _mapRowToPeerEvaluation(row)).toList();
   }
 
   PeerEvaluationData _mapRowToPeerEvaluation(Map<String, dynamic> row) {
@@ -1145,14 +1163,45 @@ class AcademicRemoteDatasource {
         continue;
       }
 
-      final submittedEvals = await getSubmittedEvaluations(
-        cycleId: cycle.id,
-        evaluatorUid: normalizedUid.isNotEmpty ? normalizedUid : 'email:$normalizedEmail',
-      );
-      final alreadyEvaluatedUids = submittedEvals
-          .map((e) => e.evaluateeUid)
-          .toSet()
-          .toList();
+      final evaluatorKeys = <String>{};
+      if (normalizedUid.isNotEmpty) {
+        evaluatorKeys.add(normalizedUid);
+      }
+      if (normalizedEmail.isNotEmpty) {
+        evaluatorKeys.add('email:$normalizedEmail');
+        evaluatorKeys.add(normalizedEmail);
+      }
+
+      final submittedById = <String, PeerEvaluationData>{};
+      for (final evaluatorKey in evaluatorKeys) {
+        final submitted = await getSubmittedEvaluations(
+          cycleId: cycle.id,
+          evaluatorUid: evaluatorKey,
+        );
+        for (final item in submitted) {
+          submittedById[item.id] = item;
+        }
+      }
+
+      final alreadyEvaluatedPeerUids = <String>{};
+      for (final peer in peersToEvaluate) {
+        final peerUid = peer.uid.trim();
+        final peerEmail = peer.email.trim().toLowerCase();
+        final peerKeys = <String>{
+          if (peerUid.isNotEmpty) peerUid,
+          if (peerEmail.isNotEmpty) peerEmail,
+          if (peerEmail.isNotEmpty) 'email:$peerEmail',
+        };
+
+        final matched = submittedById.values.any((evaluation) {
+          final evaluateeUid = evaluation.evaluateeUid.trim().toLowerCase();
+          return peerKeys.contains(evaluateeUid);
+        });
+
+        if (matched && peerUid.isNotEmpty) {
+          alreadyEvaluatedPeerUids.add(peerUid);
+        }
+      }
 
       final groupCode = _asString(groupData['groupName']).isNotEmpty
           ? _asString(groupData['groupName'])
@@ -1176,7 +1225,7 @@ class AcademicRemoteDatasource {
         group: groupOverview,
         categoryName: categoryName,
         peersToEvaluate: peersToEvaluate,
-        alreadyEvaluatedUids: alreadyEvaluatedUids,
+        alreadyEvaluatedUids: alreadyEvaluatedPeerUids.toList(),
       ));
     }
 

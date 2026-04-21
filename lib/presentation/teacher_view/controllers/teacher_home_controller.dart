@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/utils/app_cache.dart';
 import '../../../domain/entities/academic_entities.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../../domain/usecases/academic_use_cases.dart';
@@ -89,8 +90,14 @@ class TeacherHomeController extends GetxController {
 
     isLoading.value = true;
     try {
+      final cached = await AppCache.instance.getTeacherCourses(owner);
+      if (cached != null && cached.isNotEmpty) {
+        courses.assignAll(cached);
+      }
+
       final result = await _getTeacherCourseOverviewsUseCase(owner);
       courses.assignAll(result);
+      await AppCache.instance.setTeacherCourses(owner, result);
     } finally {
       isLoading.value = false;
     }
@@ -121,6 +128,7 @@ class TeacherHomeController extends GetxController {
         return;
       }
 
+      await AppCache.instance.invalidateAllCourses();
       await loadCourses();
       _showSuccess('Curso creado correctamente');
     } catch (e) {
@@ -228,6 +236,9 @@ class TeacherHomeController extends GetxController {
         uploadedBy: uploadedBy,
       );
 
+      await AppCache.instance.invalidateAllCourses();
+      await AppCache.instance.invalidateAllDashboards();
+      await AppCache.instance.invalidateAllPendingEvaluations();
       await loadCourses();
       if (result.createdGroups == 0 &&
           result.activatedEnrollments == 0 &&
@@ -277,6 +288,8 @@ class TeacherHomeController extends GetxController {
         return;
       }
 
+      await AppCache.instance.invalidateTeacherDashboardCycle(cycle.id);
+      await AppCache.instance.invalidateAllPendingEvaluations();
       _showSuccess('Coevaluación "${cycle.title}" abierta.');
     } catch (e) {
       _showError('No se pudo abrir la coevaluación: $e');

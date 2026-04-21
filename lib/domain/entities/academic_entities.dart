@@ -147,6 +147,12 @@ class PendingEvaluationInfo {
     required this.alreadyEvaluatedUids,
   });
 
-  int get pendingCount => peersToEvaluate.length - alreadyEvaluatedUids.length;
+  int get pendingCount {
+    final evaluated = alreadyEvaluatedUids.toSet();
+    final completedPeers = peersToEvaluate
+        .where((peer) => evaluated.contains(peer.uid))
+        .length;
+    return peersToEvaluate.length - completedPeers;
+  }
   bool get isComplete => pendingCount <= 0;
 }

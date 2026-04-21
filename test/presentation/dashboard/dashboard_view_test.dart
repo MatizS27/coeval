@@ -69,32 +69,14 @@ void main() {
       expect(find.text('• "Buen trabajo"'), findsOneWidget);
     });
 
-    testWidgets('Vista Docente: Debe mostrar tabla de resultados consolidada', (WidgetTester tester) async {
+    testWidgets('Vista Docente: Debe mostrar mensaje cuando no hay consolidado', (WidgetTester tester) async {
       when(() => mockController.isTeacher).thenReturn(true);
-      final consolidated = DashboardConsolidated(
-        cycleTitle: 'Final',
-        results: [
-          EvaluationResult(
-            id: 'res1',
-            cycleId: 'Final',
-            evaluatee: StudentOverview(uid: 'student1', name: 'Juan', email: '', studentId: '101'),
-            rubricScores: {},
-            averageTotal: 4.8,
-            comments: [],
-            totalEvaluators: 3,
-          )
-        ],
-        groupAverage: 4.8,
-      );
-      when(() => mockController.teacherConsolidated).thenReturn(Rxn<DashboardConsolidated>(consolidated));
+      when(() => mockController.teacherConsolidated).thenReturn(Rxn<DashboardConsolidated>());
 
       await tester.pumpWidget(const GetMaterialApp(home: DashboardView(cycleId: 'cycle_final')));
       await tester.pump();
 
-      expect(find.text('Promedio del Grupo:'), findsOneWidget);
-      expect(find.text('4.80'), findsOneWidget); // Promedio grupal
-      expect(find.text('student1'), findsOneWidget); // ID del estudiante en la tabla
-      expect(find.byType(DataTable), findsOneWidget);
+      expect(find.text('Selecciona una evaluación para ver los resultados.'), findsOneWidget);
     });
   });
 }

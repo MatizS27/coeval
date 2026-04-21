@@ -12,6 +12,8 @@ class DashboardRemoteDatasource {
   static const String _evaluationsTable = 'evaluations';
   static const String _evaluationCyclesTable = 'evaluation_cycles';
   static const String _usersTable = 'users';
+  static const String _groupsTable = 'groups';
+  static const String _enrollmentsTable = 'enrollments';
 
   Map<String, String> get _headers => {
     'Content-Type': 'application/json',
@@ -62,6 +64,25 @@ class DashboardRemoteDatasource {
       
       // 1. Obtener info del ciclo (título y rúbricas)
       final cycleInfo = await _getCycleInfo(cycleId);
+      final groupInfo = await _getGroupInfo(cycleInfo.groupId);
+      final activeEnrollments = await _getActiveEnrollments(cycleInfo.groupId);
+      final expectedStudentsByUid = <String, StudentOverview>{};
+      for (final enrollment in activeEnrollments) {
+        final uid = _asString(enrollment['studentUId']).isNotEmpty
+            ? _asString(enrollment['studentUId'])
+            : _asString(enrollment['studentUid']);
+        if (uid.isEmpty) {
+          continue;
+        }
+        expectedStudentsByUid[uid] = StudentOverview(
+          uid: uid,
+          name: _asString(enrollment['studentName']).isEmpty
+              ? 'Estudiante'
+              : _asString(enrollment['studentName']),
+          email: _asString(enrollment['studentEmail']),
+          studentId: _asString(enrollment['studentId']),
+        );
+      }
 
       // 2. Obtener todas las evaluaciones del ciclo
       final evalsQuery = {'tableName': _evaluationsTable, 'cycleId': cycleId};
@@ -74,7 +95,27 @@ class DashboardRemoteDatasource {
       if (kDebugMode) print('[DASHBOARD] Total evaluaciones encontradas: ${allEvals.length}');
 
       if (allEvals.isEmpty) {
-        return DashboardConsolidated(cycleTitle: cycleInfo.title, results: [], groupAverage: 0);
+        return DashboardConsolidated(
+          cycleTitle: cycleInfo.title,
+          results: [],
+          groupAverage: 0,
+          totalStudents: expectedStudentsByUid.length,
+          pendingStudents: expectedStudentsByUid.length,
+          evaluatedStudents: 0,
+          totalEvaluationsSubmitted: 0,
+          rubricAverages: const {},
+          groupStats: [
+            GroupStats(
+              groupId: cycleInfo.groupId,
+              groupName: groupInfo.name,
+              totalStudents: expectedStudentsByUid.length,
+              evaluatedStudents: 0,
+              averageScore: 0,
+            ),
+          ],
+          topStudents: const [],
+          lowStudents: const [],
+        );
       }
 
       // 3. Obtener nombres de usuarios
@@ -92,22 +133,69 @@ class DashboardRemoteDatasource {
       List<EvaluationResult> results = [];
       double totalSum = 0;
       for (var uid in byEvaluatee.keys) {
+        final fallbackStudent = expectedStudentsByUid[uid];
         final res = _processEvaluations(
           cycleId, 
           uid, 
           byEvaluatee[uid]!, 
           cycleInfo.rubrics, 
           cycleInfo.title,
-          userName: userNames[uid]
+          userName: userNames[uid] ?? fallbackStudent?.name,
+          userEmail: fallbackStudent?.email ?? '',
+          userStudentId: fallbackStudent?.studentId ?? '',
+          groupId: cycleInfo.groupId,
+          groupName: groupInfo.name,
         );
         results.add(res);
         totalSum += res.averageTotal;
       }
 
+      results.sort((a, b) => b.averageTotal.compareTo(a.averageTotal));
+
+      final rubricAverages = <String, double>{};
+      for (final result in results) {
+        result.rubricScores.forEach((rubric, value) {
+          rubricAverages[rubric] = (rubricAverages[rubric] ?? 0) + value;
+        });
+      }
+      if (results.isNotEmpty) {
+        rubricAverages.updateAll((key, value) => value / results.length);
+      }
+
+      final evaluatedStudents = results.length;
+      final totalStudents = expectedStudentsByUid.length < evaluatedStudents
+          ? evaluatedStudents
+          : expectedStudentsByUid.length;
+        final pendingStudents = totalStudents > evaluatedStudents
+          ? totalStudents - evaluatedStudents
+          : 0;
+
+      final topStudents = results.take(3).toList();
+      final lowStudents = [...results.reversed.take(3).toList().reversed];
+
+      final groupAverage = results.isEmpty ? 0.0 : totalSum / results.length;
+      final groupStats = [
+        GroupStats(
+          groupId: cycleInfo.groupId,
+          groupName: groupInfo.name,
+          totalStudents: totalStudents,
+          evaluatedStudents: evaluatedStudents,
+          averageScore: groupAverage,
+        ),
+      ];
+
       return DashboardConsolidated(
         cycleTitle: cycleInfo.title,
         results: results,
-        groupAverage: results.isEmpty ? 0 : totalSum / results.length,
+        groupAverage: groupAverage,
+        totalStudents: totalStudents,
+        evaluatedStudents: evaluatedStudents,
+        pendingStudents: pendingStudents,
+        totalEvaluationsSubmitted: allEvals.length,
+        rubricAverages: rubricAverages,
+        groupStats: groupStats,
+        topStudents: topStudents,
+        lowStudents: lowStudents,
       );
     } catch (e) {
       if (kDebugMode) print('Error in getResultsForTeacher: $e');
@@ -115,7 +203,7 @@ class DashboardRemoteDatasource {
     }
   }
 
-  Future<({String title, List<String> rubrics})> _getCycleInfo(String cycleId) async {
+  Future<({String title, List<String> rubrics, String groupId})> _getCycleInfo(String cycleId) async {
     try {
       final query = {'tableName': _evaluationCyclesTable, '_id': cycleId};
       final uri = Uri.parse('${_robleDatasource.databaseUrl}/${_robleDatasource.dbName}/read')
@@ -127,6 +215,7 @@ class DashboardRemoteDatasource {
       if (data.isNotEmpty) {
         final cycle = data[0];
         final String title = (cycle['title'] ?? 'Evaluación').toString();
+        final String groupId = _asString(cycle['groupId']);
         List<String> rubrics = [];
         final criteria = cycle['criteria'];
         if (criteria != null) {
@@ -135,12 +224,60 @@ class DashboardRemoteDatasource {
             rubrics = List<String>.from(criteriaMap['rubrics']);
           }
         }
-        return (title: title, rubrics: rubrics);
+        return (title: title, rubrics: rubrics, groupId: groupId);
       }
     } catch (e) {
       if (kDebugMode) print('Error fetching cycle info: $e');
     }
-    return (title: 'Evaluación', rubrics: <String>[]);
+    return (title: 'Evaluación', rubrics: <String>[], groupId: '');
+  }
+
+  Future<({String id, String name})> _getGroupInfo(String groupId) async {
+    if (groupId.isEmpty) {
+      return (id: '', name: 'Grupo');
+    }
+
+    try {
+      final query = {'tableName': _groupsTable, '_id': groupId};
+      final uri = Uri.parse('${_robleDatasource.databaseUrl}/${_robleDatasource.dbName}/read')
+          .replace(queryParameters: query);
+
+      final resp = await _robleDatasource.client.get(uri, headers: _headers);
+      final rows = _parseRobleResponse(resp.body);
+      if (rows.isEmpty) {
+        return (id: groupId, name: 'Grupo');
+      }
+
+      final row = rows.first;
+      final code = _asString(row['code']);
+      final name = _asString(row['name']);
+      final displayName = name.isNotEmpty ? name : (code.isNotEmpty ? code : 'Grupo');
+
+      return (id: groupId, name: displayName);
+    } catch (_) {
+      return (id: groupId, name: 'Grupo');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _getActiveEnrollments(String groupId) async {
+    if (groupId.isEmpty) {
+      return const [];
+    }
+
+    final query = {
+      'tableName': _enrollmentsTable,
+      'groupId': groupId,
+      'isActive': 'true',
+    };
+
+    try {
+      final uri = Uri.parse('${_robleDatasource.databaseUrl}/${_robleDatasource.dbName}/read')
+          .replace(queryParameters: query);
+      final resp = await _robleDatasource.client.get(uri, headers: _headers);
+      return _parseRobleResponse(resp.body);
+    } catch (_) {
+      return const [];
+    }
   }
 
   Future<Map<String, String>> _fetchAllUserNames() async {
@@ -169,7 +306,13 @@ class DashboardRemoteDatasource {
     List<dynamic> evals, 
     List<String> realRubrics, 
     String cycleTitle,
-    {String? userName}
+    {
+    String? userName,
+    String userEmail = '',
+    String userStudentId = '',
+    String groupId = '',
+    String groupName = '',
+  }
   ) {
     Map<String, double> rubricsAvg = {};
     List<String> allComments = [];
@@ -203,13 +346,22 @@ class DashboardRemoteDatasource {
     return EvaluationResult(
       id: '${cycleId}_$evaluateeUid',
       cycleId: cycleTitle,
-      evaluatee: StudentOverview(uid: evaluateeUid, name: userName ?? 'Estudiante', email: '', studentId: ''),
+      evaluatee: StudentOverview(
+        uid: evaluateeUid,
+        name: userName ?? 'Estudiante',
+        email: userEmail,
+        studentId: userStudentId,
+      ),
+      groupId: groupId,
+      groupName: groupName,
       rubricScores: rubricsAvg,
       averageTotal: totalScoreSum,
       comments: allComments,
       totalEvaluators: count,
     );
   }
+
+  String _asString(dynamic value) => value?.toString() ?? '';
 
   List<Map<String, dynamic>> _parseRobleResponse(String body) {
     try {
