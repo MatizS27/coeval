@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../domain/entities/academic_entities.dart';
+import '../../dashboard/views/dashboard_view.dart';
 import '../controllers/teacher_home_controller.dart';
 
 class TeacherCourseDetailView extends StatefulWidget {
@@ -361,73 +362,78 @@ class _TeacherCourseDetailViewState extends State<TeacherCourseDetailView>
         color: const Color(0xFFF8F8F8),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: isOpen ? Colors.green : Colors.grey,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  cycle.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 14,
+      child: InkWell(
+        onTap: () => Get.to(() => DashboardView(cycleId: cycle.id)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: isOpen ? Colors.green : Colors.grey,
+                    shape: BoxShape.circle,
                   ),
                 ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    cycle.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                const Icon(Icons.analytics_outlined, size: 16, color: Color(0xFFF76900)),
+                const SizedBox(width: 4),
+                Text(
+                  isOpen ? 'Abierta' : 'Cerrada',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: isOpen ? Colors.green.shade700 : Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+            if (cycle.rubrics.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: cycle.rubrics.map((rubric) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF76900).withAlpha(25),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      rubric,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFFF76900),
+                      ),
+                    ),
+                  );
+                }).toList(),
               ),
+            ],
+            if (cycle.closesAt != null) ...[
+              const SizedBox(height: 6),
               Text(
-                isOpen ? 'Abierta' : 'Cerrada',
+                'Cierra: ${_formatDate(cycle.closesAt!)}',
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: isOpen ? Colors.green.shade700 : Colors.grey.shade600,
+                  color: Colors.grey.shade600,
                 ),
               ),
             ],
-          ),
-          if (cycle.rubrics.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: cycle.rubrics.map((rubric) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF76900).withAlpha(25),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    rubric,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFFF76900),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
           ],
-          if (cycle.closesAt != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              'Cierra: ${_formatDate(cycle.closesAt!)}',
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }

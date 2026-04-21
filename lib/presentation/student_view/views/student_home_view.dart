@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../domain/entities/academic_entities.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../../dashboard/views/dashboard_view.dart';
 import '../controllers/student_home_controller.dart';
 import 'student_course_detail_view.dart';
 
@@ -21,6 +22,11 @@ class StudentHomeView extends StatelessWidget {
         backgroundColor: const Color(0xFF2D2D2D),
         title: const Text('Mis Cursos', style: TextStyle(color: Colors.white)),
         actions: [
+          IconButton(
+            tooltip: 'Ver mis resultados',
+            onPressed: () => Get.to(() => const DashboardView()),
+            icon: const Icon(Icons.bar_chart_rounded, color: Colors.white),
+          ),
           Obx(() {
             final pendingCount = controller.totalPendingCount;
             return Stack(

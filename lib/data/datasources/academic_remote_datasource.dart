@@ -1233,15 +1233,17 @@ class AcademicRemoteDatasource {
       'comments': comments ?? '',
       'updatedAt': nowIso,
       'evaluatorGroupIdAtEval': evaluatorEnrollment.isEmpty
-          ? null
+          ? groupId
           : _asString(evaluatorEnrollment.first['groupId']),
       'evaluateeGroupIdAtEval': evaluateeEnrollment.isEmpty
-          ? null
+          ? groupId
           : _asString(evaluateeEnrollment.first['groupId']),
       'enrollmentIdAtEval': evaluateeEnrollment.isEmpty
           ? null
           : _asString(evaluateeEnrollment.first['_id']),
     };
+
+    _log('SUBMIT_EVAL', 'Payload: ${jsonEncode(payload)}');
 
     if (existing.isNotEmpty) {
       return _updateRecord(

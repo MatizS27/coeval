@@ -7,16 +7,21 @@ import 'central.dart';
 import 'core/theme.dart';
 import 'data/datasources/academic_remote_datasource.dart';
 import 'data/datasources/auth_remote_datasource.dart';
+import 'data/datasources/dashboard_remote_datasource.dart';
 import 'data/datasources/roble_datasource.dart';
 import 'data/repositories/academic_repository_impl.dart';
 import 'data/repositories/auth_repository_impl.dart';
+import 'data/repositories/dashboard_repository_impl.dart';
+import 'domain/repositories/dashboard_repository.dart';
 import 'domain/usecases/academic_use_cases.dart';
+import 'domain/usecases/get_evaluation_results_use_case.dart';
 import 'domain/usecases/login_use_case.dart';
 import 'presentation/auth/controllers/auth_controller.dart';
 import 'presentation/auth/views/login_view.dart';
 import 'presentation/auth/views/register_view.dart';
 import 'presentation/auth/controllers/reset_password_controller.dart';
 import 'presentation/auth/views/reset_password_view.dart';
+import 'presentation/dashboard/controllers/dashboard_controller.dart';
 import 'presentation/student_view/controllers/student_home_controller.dart';
 import 'presentation/teacher_view/controllers/teacher_home_controller.dart';
 
@@ -38,8 +43,11 @@ void main() {
   final robleDatasource = RobleDatasource();
   final authRemoteDatasource = AuthRemoteDatasource(robleDatasource);
   final academicRemoteDatasource = AcademicRemoteDatasource(robleDatasource);
+  final dashboardRemoteDatasource = DashboardRemoteDatasource(robleDatasource);
+
   final authRepository = AuthRepositoryImpl(authRemoteDatasource);
   final academicRepository = AcademicRepositoryImpl(academicRemoteDatasource);
+  final dashboardRepository = DashboardRepositoryImpl(dashboardRemoteDatasource);
 
   final authController = Get.put(
     AuthController(
@@ -96,8 +104,11 @@ void main() {
     permanent: true,
   );
 
+  // Inyectamos el nuevo DashboardController
   Get.put(
-    ResetPasswordController(ResetPasswordUseCase(authRepository)),
+    DashboardController(
+      getResultsUseCase: GetEvaluationResultsUseCase(dashboardRepository),
+    ),
     permanent: true,
   );
 
