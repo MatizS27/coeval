@@ -5,6 +5,21 @@ Proyecto universitario de desarrollo móvil orientado a la evaluación entre par
 
 ---
 
+## 📹 Videos Demostrativos
+
+Visualiza las siguientes demostraciones para comprender las funcionalidades, arquitectura y testing de la aplicación:
+
+| # | Tema | Descripción | Video |
+|---|------|-------------|-------|
+| **1** | **Gestión Académica** | Creación de usuarios, cursos, importación de estudiantes con CSV y verificación de grupos | [![Watch Video](https://img.shields.io/badge/▶-Watch%20on%20YouTube-red?style=for-the-badge&logo=youtube)](https://youtu.be/QvOmQ-kxKKs) |
+| **2** | **Evaluación y Reportes** | Creación de actividades de evaluación, interface de evaluación de pares y generación de reportes | [![Watch Video](https://img.shields.io/badge/▶-Watch%20on%20YouTube-red?style=for-the-badge&logo=youtube)](https://youtu.be/kA9OurEoSKY) |
+| **3** | **Pruebas de Widget** | Ejecución y explicación de tests unitarios para todos los widgets usando mocks de controladores | [![Watch Video](https://img.shields.io/badge/▶-Watch%20on%20YouTube-red?style=for-the-badge&logo=youtube)](https://youtu.be/u-zsmiJpxpo) |
+| **4** | **Pruebas de Integración** | Flujos completos de profesor y estudiante usando MockClient HTTP y sincronización de datos | [![Watch Video](https://img.shields.io/badge/▶-Watch%20on%20YouTube-red?style=for-the-badge&logo=youtube)](https://youtu.be/5X-EFcQ39qw) |
+| **5** | **Implementación de Caché** | Decisiones de diseño, datos almacenados, gestión de lectura/escritura e invalidación | [![Watch Video](https://img.shields.io/badge/▶-Watch%20on%20YouTube-red?style=for-the-badge&logo=youtube)](https://youtu.be/sf9zMHKYKJ8) |
+| **6** | **Revisión de Código** | Explicación del enfoque de Clean Architecture y flujos de datos (no archivo por archivo) | [![Watch Video](https://img.shields.io/badge/▶-Watch%20on%20YouTube-red?style=for-the-badge&logo=youtube)](https://youtu.be/9pPicdX0ZLA) |
+
+---
+
 ## Tabla de Contenido
 
 1. [Descripción general del proyecto](#1-descripción-general-del-proyecto)
