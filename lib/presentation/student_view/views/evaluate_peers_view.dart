@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/theme.dart';
 import '../../../domain/entities/academic_entities.dart';
 import '../controllers/student_home_controller.dart';
 
@@ -27,7 +28,7 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
   void initState() {
     super.initState();
     _submittedUids.addAll(widget.pendingInfo.alreadyEvaluatedUids);
-    
+
     for (final peer in widget.pendingInfo.peersToEvaluate) {
       _rubricScores[peer.uid] = {};
       for (int i = 0; i < rubrics.length; i++) {
@@ -46,16 +47,20 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F3F5),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2D2D2D),
-        elevation: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               widget.pendingInfo.cycle.title,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
             Text(
               widget.pendingInfo.group.name,
@@ -69,67 +74,131 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
       ),
       body: Obx(() {
         final pendingPeers = _pendingPeers;
+        final total = widget.pendingInfo.peersToEvaluate.length;
+        final completed = total - pendingPeers.length;
 
         if (pendingPeers.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.check_circle,
-                    size: 80,
-                    color: Colors.green.shade400,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Has evaluado a todos tus compañeros',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2D2D2D),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Gracias por completar la evaluación',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () => Get.back(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF76900),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 14,
-                      ),
-                    ),
-                    child: const Text('Volver'),
-                  ),
-                ],
-              ),
-            ),
-          );
+          return _buildAllDoneState();
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(12),
-          itemCount: pendingPeers.length,
-          itemBuilder: (context, index) {
-            final peer = pendingPeers[index];
-            return _buildPeerEvaluationCard(peer);
-          },
+        return Column(
+          children: [
+            _buildProgressBanner(completed, total),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                itemCount: pendingPeers.length,
+                itemBuilder: (context, index) {
+                  final peer = pendingPeers[index];
+                  return _buildPeerEvaluationCard(peer);
+                },
+              ),
+            ),
+          ],
         );
       }),
+    );
+  }
+
+  Widget _buildProgressBanner(int completed, int total) {
+    final progress = total > 0 ? completed / total : 0.0;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.borderSoft),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.timeline_rounded,
+                  size: 16, color: AppColors.primary),
+              const SizedBox(width: 6),
+              const Text(
+                'Progreso',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '$completed / $total',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              backgroundColor: AppColors.divider,
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAllDoneState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                color: AppColors.successSoft,
+                borderRadius: BorderRadius.circular(28),
+              ),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                size: 56,
+                color: AppColors.success,
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Has evaluado a todos tus compañeros',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Gracias por completar la evaluación.',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => Get.back(),
+              child: const Text('Volver'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -139,11 +208,7 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
       final peerScores = _rubricScores[peer.uid] ?? {};
 
       return Card(
-        elevation: 0,
         margin: const EdgeInsets.only(bottom: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -152,12 +217,14 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
               Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: const Color(0xFFF76900).withAlpha(25),
+                    radius: 22,
+                    backgroundColor: AppColors.primarySoft,
                     child: Text(
                       _getInitials(peer.name, peer.email),
                       style: const TextStyle(
-                        color: Color(0xFFF76900),
-                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
                       ),
                     ),
                   ),
@@ -169,17 +236,17 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
                         Text(
                           peer.name.isEmpty ? peer.email : peer.name,
                           style: const TextStyle(
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             fontSize: 15,
-                            color: Color(0xFF2D2D2D),
+                            color: AppColors.textPrimary,
                           ),
                         ),
                         if (peer.name.isNotEmpty)
                           Text(
                             peer.email,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade600,
+                              color: AppColors.textMuted,
                             ),
                           ),
                       ],
@@ -188,8 +255,7 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
                   _buildAverageScoreBadge(peerScores),
                 ],
               ),
-              const SizedBox(height: 20),
-              
+              const SizedBox(height: 18),
               if (rubrics.isEmpty)
                 _buildSingleScoreSlider(peer, isSubmitting)
               else
@@ -202,41 +268,21 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
                     isSubmitting: isSubmitting,
                   );
                 }),
-              
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               const Text(
                 'Comentarios (opcional)',
                 style: TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF555555),
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
                 ),
               ),
               const SizedBox(height: 8),
               TextField(
                 enabled: !isSubmitting,
                 maxLines: 2,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'Escribe un comentario sobre el desempeño...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(
-                      color: Color(0xFFF76900),
-                      width: 2,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.all(12),
                 ),
                 onChanged: (value) {
                   _comments[peer.uid] = value;
@@ -245,32 +291,28 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: isSubmitting
-                      ? null
-                      : () => _submitEvaluation(peer),
+                child: ElevatedButton.icon(
+                  onPressed:
+                      isSubmitting ? null : () => _submitEvaluation(peer),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF76900),
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.grey.shade300,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                    disabledBackgroundColor: AppColors.divider,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  child: isSubmitting
+                  icon: isSubmitting
                       ? const SizedBox(
-                          height: 20,
-                          width: 20,
+                          height: 18,
+                          width: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: Colors.white,
                           ),
                         )
-                      : const Text(
-                          'Enviar Evaluación',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
+                      : const Icon(Icons.send_rounded, size: 18),
+                  label: Text(
+                    isSubmitting ? 'Enviando...' : 'Enviar evaluación',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 14),
+                  ),
                 ),
               ),
             ],
@@ -282,21 +324,22 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
 
   Widget _buildAverageScoreBadge(Map<int, int> scores) {
     if (scores.isEmpty) return const SizedBox.shrink();
-    
+
     final avg = scores.values.reduce((a, b) => a + b) / scores.length;
-    final color = _getScoreColor(avg.toDouble());
-    
+    final color = _getScoreColor(avg);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withAlpha(25),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(
         'Prom: ${avg.toStringAsFixed(1)}',
         style: TextStyle(
           fontSize: 12,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
           color: color,
         ),
       ),
@@ -306,7 +349,7 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
   Widget _buildSingleScoreSlider(StudentOverview peer, bool isSubmitting) {
     final scores = _rubricScores[peer.uid] ?? {};
     final score = (scores[0] ?? 3).toDouble();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -314,11 +357,11 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
           'Puntuación general',
           style: TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF555555),
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         _buildScoreSlider(
           score: score,
           onChanged: isSubmitting
@@ -341,6 +384,7 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
     required int currentScore,
     required bool isSubmitting,
   }) {
+    final scoreColor = _getScoreColor(currentScore.toDouble());
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -350,49 +394,49 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
               width: 24,
               height: 24,
               decoration: BoxDecoration(
-                color: const Color(0xFFF76900).withAlpha(20),
+                color: AppColors.primarySoft,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Center(
                 child: Text(
                   '${rubricIndex + 1}',
                   style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFFF76900),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
                 rubricName,
                 style: const TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF555555),
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
                 ),
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: _getScoreColor(currentScore.toDouble()).withAlpha(20),
+                color: scoreColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 '$currentScore',
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: _getScoreColor(currentScore.toDouble()),
+                  fontWeight: FontWeight.w700,
+                  color: scoreColor,
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         _buildScoreSlider(
           score: currentScore.toDouble(),
           onChanged: isSubmitting
@@ -414,27 +458,29 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
   }) {
     return Row(
       children: [
-        Text(
+        const Text(
           '1',
           style: TextStyle(
             fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade500,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textMuted,
           ),
         ),
         Expanded(
           child: SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              activeTrackColor: const Color(0xFFF76900),
-              inactiveTrackColor: Colors.grey.shade300,
-              thumbColor: const Color(0xFFF76900),
-              overlayColor: const Color(0xFFF76900).withAlpha(50),
-              valueIndicatorColor: const Color(0xFFF76900),
+              activeTrackColor: AppColors.primary,
+              inactiveTrackColor: AppColors.divider,
+              thumbColor: AppColors.primary,
+              overlayColor: AppColors.primary.withValues(alpha: 0.18),
+              valueIndicatorColor: AppColors.primary,
+              activeTickMarkColor: Colors.white,
+              inactiveTickMarkColor: AppColors.textMuted,
               trackHeight: 4,
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
               valueIndicatorTextStyle: const TextStyle(
                 color: Colors.white,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
               ),
             ),
             child: Slider(
@@ -447,12 +493,12 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
             ),
           ),
         ),
-        Text(
+        const Text(
           '5',
           style: TextStyle(
             fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade500,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textMuted,
           ),
         ),
       ],
@@ -487,8 +533,8 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
           'Evaluación enviada',
           'Has evaluado a ${peer.name.isEmpty ? peer.email : peer.name}',
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green.shade100,
-          colorText: Colors.green.shade900,
+          backgroundColor: AppColors.successSoft,
+          colorText: AppColors.success,
           margin: const EdgeInsets.all(16),
           borderRadius: 12,
           duration: const Duration(seconds: 2),
@@ -501,8 +547,8 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
 
   String _getInitials(String name, String email) {
     if (name.isNotEmpty) {
-      final parts = name.split(' ');
-      if (parts.length >= 2) {
+      final parts = name.trim().split(RegExp(r'\s+'));
+      if (parts.length >= 2 && parts[0].isNotEmpty && parts[1].isNotEmpty) {
         return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
       }
       return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
@@ -513,17 +559,17 @@ class _EvaluatePeersViewState extends State<EvaluatePeersView> {
   Color _getScoreColor(double score) {
     switch (score.round()) {
       case 1:
-        return Colors.red;
+        return const Color(0xFFD32F2F);
       case 2:
-        return Colors.orange;
+        return const Color(0xFFEF6C00);
       case 3:
-        return Colors.amber.shade700;
+        return const Color(0xFFB58A00);
       case 4:
-        return Colors.lightGreen;
+        return const Color(0xFF6BBE3A);
       case 5:
-        return Colors.green;
+        return AppColors.success;
       default:
-        return Colors.grey;
+        return AppColors.textMuted;
     }
   }
 }

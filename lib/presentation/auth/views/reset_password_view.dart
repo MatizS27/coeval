@@ -16,10 +16,9 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Restablecer Contraseña'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        title: const Text('Restablecer contraseña'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -27,19 +26,13 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               children: [
-                const SizedBox(height: 40),
-                
+                const SizedBox(height: 32),
                 _buildHeader(),
-                
-                const SizedBox(height: 40),
-                
+                const SizedBox(height: 28),
                 _buildResetForm(),
-                
-                const SizedBox(height: 40),
-                
+                const SizedBox(height: 24),
                 _buildResetButton(),
-                
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
               ],
             ),
           ),
@@ -52,44 +45,40 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
     return Column(
       children: [
         Container(
-          width: 80,
-          height: 80,
+          width: 76,
+          height: 76,
           decoration: BoxDecoration(
-            color: AppColors.primary,
+            color: AppColors.appBar,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+                color: AppColors.appBar.withValues(alpha: 0.18),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
           child: const Icon(
             Icons.lock_reset_rounded,
-            size: 40,
+            size: 36,
             color: Colors.white,
           ),
         ),
-        
-        const SizedBox(height: 24),
-        
+        const SizedBox(height: 18),
         const Text(
-          'Restablecer Contraseña',
+          'Restablecer contraseña',
           style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
           ),
         ),
-        
-        const SizedBox(height: 8),
-        
-        Text(
+        const SizedBox(height: 6),
+        const Text(
           'Ingresa el token de recuperación y tu nueva contraseña',
           style: TextStyle(
-            fontSize: 14,
-            color: AppColors.textSecondary,
+            fontSize: 13,
+            color: AppColors.textMuted,
           ),
           textAlign: TextAlign.center,
         ),
@@ -99,15 +88,16 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
 
   Widget _buildResetForm() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.borderSoft),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 5),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -115,57 +105,53 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Obx(() => TextField(
-            controller: controller.tokenController,
-            onChanged: (v) => controller.token.value = v,
-            decoration: InputDecoration(
-              labelText: 'Token de recuperación',
-              hintText: 'Ingresa el token del email',
-              prefixIcon: const Icon(Icons.vpn_key_outlined),
-              errorText: controller.tokenError.value,
-            ),
-          )),
-          
-          const SizedBox(height: 16),
-          
-          Obx(() => TextField(
-            controller: controller.newPasswordController,
-            obscureText: controller.obscureNewPassword.value,
-            onChanged: (v) => controller.newPassword.value = v,
-            decoration: InputDecoration(
-              labelText: 'Nueva contraseña',
-              prefixIcon: const Icon(Icons.lock_outlined),
-              errorText: controller.newPasswordError.value,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  controller.obscureNewPassword.value
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
+                controller: controller.tokenController,
+                onChanged: (v) => controller.token.value = v,
+                decoration: InputDecoration(
+                  labelText: 'Token de recuperación',
+                  hintText: 'Ingresa el token del email',
+                  prefixIcon: const Icon(Icons.vpn_key_outlined),
+                  errorText: controller.tokenError.value,
                 ),
-                onPressed: controller.toggleNewPasswordVisibility,
-              ),
-            ),
-          )),
-          
-          const SizedBox(height: 16),
-          
+              )),
+          const SizedBox(height: 14),
           Obx(() => TextField(
-            controller: controller.confirmPasswordController,
-            obscureText: controller.obscureConfirmPassword.value,
-            onChanged: (v) => controller.confirmPassword.value = v,
-            decoration: InputDecoration(
-              labelText: 'Confirmar contraseña',
-              prefixIcon: const Icon(Icons.lock_outlined),
-              errorText: controller.confirmPasswordError.value,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  controller.obscureConfirmPassword.value
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
+                controller: controller.newPasswordController,
+                obscureText: controller.obscureNewPassword.value,
+                onChanged: (v) => controller.newPassword.value = v,
+                decoration: InputDecoration(
+                  labelText: 'Nueva contraseña',
+                  prefixIcon: const Icon(Icons.lock_outlined),
+                  errorText: controller.newPasswordError.value,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      controller.obscureNewPassword.value
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                    ),
+                    onPressed: controller.toggleNewPasswordVisibility,
+                  ),
                 ),
-                onPressed: controller.toggleConfirmPasswordVisibility,
-              ),
-            ),
-          )),
+              )),
+          const SizedBox(height: 14),
+          Obx(() => TextField(
+                controller: controller.confirmPasswordController,
+                obscureText: controller.obscureConfirmPassword.value,
+                onChanged: (v) => controller.confirmPassword.value = v,
+                decoration: InputDecoration(
+                  labelText: 'Confirmar contraseña',
+                  prefixIcon: const Icon(Icons.lock_outlined),
+                  errorText: controller.confirmPasswordError.value,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      controller.obscureConfirmPassword.value
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                    ),
+                    onPressed: controller.toggleConfirmPasswordVisibility,
+                  ),
+                ),
+              )),
         ],
       ),
     );
@@ -173,39 +159,38 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
 
   Widget _buildResetButton() {
     return Obx(() => SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: controller.isLoading.value
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.primary,
-              ),
-            )
-          : ElevatedButton(
-              onPressed: controller.resetPassword,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 3,
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Restablecer Contraseña',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+          width: double.infinity,
+          height: 54,
+          child: controller.isLoading.value
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary,
+                  ),
+                )
+              : ElevatedButton(
+                  onPressed: controller.resetPassword,
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  SizedBox(width: 8),
-                  Icon(Icons.check_circle_outline, color: Colors.white),
-                ],
-              ),
-            ),
-    ));
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Restablecer contraseña',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Icon(Icons.check_circle_outline,
+                          color: Colors.white, size: 20),
+                    ],
+                  ),
+                ),
+        ));
   }
 }

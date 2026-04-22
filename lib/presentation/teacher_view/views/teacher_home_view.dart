@@ -18,17 +18,16 @@ class TeacherHomeView extends StatelessWidget {
     final authController = Get.find<AuthController>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F3F5),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2D2D2D),
-        elevation: 0,
-        title: const Text('My Courses', style: TextStyle(color: Colors.white)),
+        title: const Text('Mis cursos'),
         actions: [
           IconButton(
             tooltip: 'Cerrar sesión',
             onPressed: authController.logout,
-            icon: const Icon(Icons.logout, color: Colors.white),
+            icon: const Icon(Icons.logout_rounded),
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: Obx(() {
@@ -37,18 +36,19 @@ class TeacherHomeView extends StatelessWidget {
         }
 
         if (controller.courses.isEmpty) {
-          return Center(
-            child: Text(
-              'No hay cursos todavía',
-              style: TextStyle(color: Colors.grey.shade700),
-            ),
+          return _EmptyState(
+            icon: Icons.menu_book_rounded,
+            title: 'No hay cursos todavía',
+            description:
+                'Crea tu primer curso pulsando el botón + para comenzar a gestionar tus equipos.',
           );
         }
 
         return RefreshIndicator(
           onRefresh: controller.loadCourses,
+          color: AppColors.primary,
           child: ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             itemCount: controller.courses.length,
             itemBuilder: (context, index) {
               final course = controller.courses[index];
@@ -57,10 +57,12 @@ class TeacherHomeView extends StatelessWidget {
           ),
         );
       }),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showCreateCourseDialog(context, controller),
-        backgroundColor: const Color(0xFFF76900),
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Nuevo curso'),
       ),
     );
   }
@@ -77,15 +79,35 @@ class TeacherHomeView extends StatelessWidget {
       context: context,
       builder: (_) {
         return AlertDialog(
-          backgroundColor: Colors.white,
+          backgroundColor: AppColors.surface,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
           ),
+          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
           title: Row(
-            children: const [
-              Icon(Icons.class_, color: Color(0xFFF76900)),
-              SizedBox(width: 8),
-              Text('Crear curso', style: TextStyle(color: Color(0xFF2D2D2D))),
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.class_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Crear curso',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                ),
+              ),
             ],
           ),
           content: Column(
@@ -93,47 +115,33 @@ class TeacherHomeView extends StatelessWidget {
             children: [
               TextField(
                 controller: nameCtrl,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Nombre',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               TextField(
                 controller: nrcCtrl,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'NRC',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               TextField(
                 controller: termCtrl,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Periodo',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
                 ),
               ),
             ],
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
           actions: [
             TextButton(
               onPressed: () => Get.back(),
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF76900),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
               onPressed: () async {
                 final name = nameCtrl.text.trim();
                 final nrc = nrcCtrl.text.trim();
@@ -164,135 +172,188 @@ class _CourseCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          Get.to(() => TeacherCourseDetailView(course: course));
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                course.name,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2D2D2D),
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Material(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            Get.to(() => TeacherCourseDetailView(course: course));
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.borderSoft),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'NRC ${course.nrc} · ${course.term}',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF777777)),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 8,
-                children: [
-                  _InfoChip(
-                    icon: Icons.category,
-                    text: '${course.categoriesCount} categorías',
-                  ),
-                  _InfoChip(
-                    icon: Icons.group_work,
-                    text: '${course.groupsCount} grupos',
-                  ),
-                  _InfoChip(
-                    icon: Icons.people_alt,
-                    text: '${course.activeStudentsCount} estudiantes',
-                  ),
-                ],
-              ),
-              if (course.categories.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                const Divider(height: 1),
-                const SizedBox(height: 10),
-                const Text(
-                  'Categorías y grupos',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF444444),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 4,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.primary, AppColors.primaryDark],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                ...course.categories.map((category) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8F8F8),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Column(
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            '${category.name} · ${category.groups.length} grupos · ${category.activeStudentsCount} estudiantes',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF333333),
+                          Expanded(
+                            child: Text(
+                              course.name,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceAlt,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'NRC ${course.nrc}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  );
-                }),
-              ],
-              const SizedBox(height: 12),
-              Obx(() {
-                final isProcessing = controller.isCsvProcessing(course.id);
-                return Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: isProcessing
-                            ? null
-                            : () => _openCategorySyncDialog(context),
-                        icon: isProcessing
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.primary,
-                                ),
-                              )
-                            : const Icon(Icons.upload_file),
-                        label: Text(
-                          isProcessing ? 'Procesando CSV...' : 'Cargar CSV',
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: isProcessing
-                              ? AppColors.textSecondary
-                              : AppColors.primary,
-                          side: BorderSide(color: AppColors.primary.withOpacity(0.5)),
+                      const SizedBox(height: 4),
+                      Text(
+                        course.term,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textMuted,
                         ),
                       ),
-                    ),
-                  ],
-                );
-              }),
-            ],
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _InfoChip(
+                            icon: Icons.category_outlined,
+                            text: '${course.categoriesCount} categorías',
+                          ),
+                          _InfoChip(
+                            icon: Icons.group_work_outlined,
+                            text: '${course.groupsCount} grupos',
+                          ),
+                          _InfoChip(
+                            icon: Icons.people_alt_outlined,
+                            text: '${course.activeStudentsCount} estudiantes',
+                          ),
+                        ],
+                      ),
+                      if (course.categories.isNotEmpty) ...[
+                        const SizedBox(height: 14),
+                        const Divider(height: 1),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Categorías y grupos',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textSecondary,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ...course.categories.map((category) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceAlt,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${category.name} · ${category.groups.length} grupos · ${category.activeStudentsCount} estudiantes',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                      const SizedBox(height: 12),
+                      Obx(() {
+                        final isProcessing =
+                            controller.isCsvProcessing(course.id);
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: isProcessing
+                                    ? null
+                                    : () => _openCategorySyncDialog(context),
+                                icon: isProcessing
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.primary,
+                                        ),
+                                      )
+                                    : const Icon(Icons.upload_file_rounded,
+                                        size: 18),
+                                label: Text(
+                                  isProcessing
+                                      ? 'Procesando CSV...'
+                                      : 'Cargar CSV',
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: isProcessing
+                                      ? AppColors.textMuted
+                                      : AppColors.primary,
+                                  side: BorderSide(
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.4),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -316,34 +377,48 @@ class _CourseCard extends StatelessWidget {
       final bytes = file.bytes;
       if (bytes == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudo leer el archivo seleccionado')),
+          const SnackBar(
+              content: Text('No se pudo leer el archivo seleccionado')),
         );
         return;
       }
 
-      // Extraer el nombre de la categoría del nombre del archivo
       final categoryName = _extractCategoryName(fileName);
       if (categoryName == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('El nombre del archivo no tiene el formato esperado (debe empezar con "Categoria")')),
+          const SnackBar(
+              content: Text(
+                  'El nombre del archivo no tiene el formato esperado (debe empezar con "Categoria")')),
         );
         return;
       }
 
-      // Mostrar diálogo de confirmación
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('Confirmar importación'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Confirmar importación',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Archivo: $fileName'),
-              const SizedBox(height: 8),
-              Text('Categoría detectada: $categoryName'),
-              const SizedBox(height: 16),
-              const Text('¿Desea continuar con la importación?'),
+              _DialogInfoRow(label: 'Archivo', value: fileName),
+              const SizedBox(height: 6),
+              _DialogInfoRow(
+                  label: 'Categoría detectada', value: categoryName),
+              const SizedBox(height: 14),
+              const Text(
+                '¿Desea continuar con la importación?',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
             ],
           ),
           actions: [
@@ -353,10 +428,6 @@ class _CourseCard extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-              ),
               child: const Text('Importar'),
             ),
           ],
@@ -380,41 +451,35 @@ class _CourseCard extends StatelessWidget {
   }
 
   String? _extractCategoryName(String fileName) {
-    // Remover la extensión .csv (case-insensitive)
     var nameWithoutExt = fileName;
     if (nameWithoutExt.toLowerCase().endsWith('.csv')) {
       nameWithoutExt = nameWithoutExt.substring(0, nameWithoutExt.length - 4);
     }
 
-    // Normalizar para verificar si empieza con "categoria" (ignorando tildes y mayúsculas)
     final normalizedName = _normalizeText(nameWithoutExt.toLowerCase());
     if (!normalizedName.startsWith('categoria')) {
       return null;
     }
 
-    // Encontrar la posición de "categoria" en el nombre normalizado
     final categoriaIndex = normalizedName.indexOf('categoria');
     final categoriaLength = 'categoria'.length;
 
-    // Extraer la parte después de "categoria" usando el nombre original
-    final categoryPart = nameWithoutExt.substring(categoriaIndex + categoriaLength);
+    final categoryPart =
+        nameWithoutExt.substring(categoriaIndex + categoriaLength);
     if (categoryPart.isEmpty) {
       return null;
     }
 
-    // Tomar texto hasta el primer guion bajo (ej: CategoriaPyFlutter_AllGroups -> PyFlutter)
     final pieces = categoryPart.split('_');
     final rawCategory = pieces.first.trim();
     if (rawCategory.isEmpty) {
       return null;
     }
 
-    // Devolver el nombre de categoría original, respetando mayúsculas y tildes
     return rawCategory;
   }
 
   String _normalizeText(String text) {
-    // Reemplazar tildes
     return text
         .replaceAll('á', 'a')
         .replaceAll('é', 'e')
@@ -442,19 +507,105 @@ class _InfoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F6F6),
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderSoft),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: const Color(0xFF777777)),
+          Icon(icon, size: 13, color: AppColors.textMuted),
           const SizedBox(width: 6),
           Text(
             text,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF555555)),
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DialogInfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _DialogInfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return RichText(
+      text: TextSpan(
+        style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+        children: [
+          TextSpan(
+            text: '$label: ',
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          TextSpan(text: value),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: AppColors.primarySoft,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(icon, size: 42, color: AppColors.primary),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              description,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textMuted,
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

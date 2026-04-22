@@ -24,29 +24,22 @@ class _LoginViewState extends State<LoginView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               children: [
-                const SizedBox(height: 60),
-                
+                const SizedBox(height: 56),
                 _buildHeader(),
-                
-                const SizedBox(height: 50),
-                
+                const SizedBox(height: 40),
                 _buildLoginForm(),
-                
-                const SizedBox(height: 40),
-                
-                _buildLoginButton(),
-                
                 const SizedBox(height: 24),
-                
+                _buildLoginButton(),
+                const SizedBox(height: 16),
                 _buildRegisterLink(),
-                
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
               ],
             ),
           ),
@@ -59,46 +52,56 @@ class _LoginViewState extends State<LoginView> {
     return Column(
       children: [
         Container(
-          width: 100,
-          height: 100,
+          width: 88,
+          height: 88,
           decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(24),
+            color: AppColors.appBar,
+            borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+                color: AppColors.appBar.withValues(alpha: 0.18),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
-          child: const Icon(
-            Icons.school_rounded,
-            size: 50,
-            color: Colors.white,
+          child: const Stack(
+            alignment: Alignment.center,
+            children: [
+              Icon(
+                Icons.school_rounded,
+                size: 44,
+                color: Colors.white,
+              ),
+              Positioned(
+                bottom: 14,
+                right: 18,
+                child: Icon(
+                  Icons.bolt_rounded,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
           ),
         ),
-        
-        const SizedBox(height: 24),
-        
+        const SizedBox(height: 20),
         const Text(
           'CoEval',
           style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
+            fontSize: 30,
+            fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
-            letterSpacing: 1.2,
+            letterSpacing: 0.6,
           ),
         ),
-        
-        const SizedBox(height: 8),
-        
-        Text(
+        const SizedBox(height: 6),
+        const Text(
           'Evaluación entre pares',
           style: TextStyle(
-            fontSize: 16,
-            color: AppColors.textSecondary,
-            letterSpacing: 0.5,
+            fontSize: 14,
+            color: AppColors.textMuted,
+            letterSpacing: 0.3,
           ),
         ),
       ],
@@ -107,15 +110,16 @@ class _LoginViewState extends State<LoginView> {
 
   Widget _buildLoginForm() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.borderSoft),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 5),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -123,72 +127,63 @@ class _LoginViewState extends State<LoginView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Iniciar Sesión',
+            'Iniciar sesión',
             style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
             ),
           ),
-          
-          const SizedBox(height: 8),
-          
-          Text(
+          const SizedBox(height: 6),
+          const Text(
             'Ingresa con tu correo institucional',
             style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
+              fontSize: 13,
+              color: AppColors.textMuted,
             ),
           ),
-          
-          const SizedBox(height: 24),
-          
+          const SizedBox(height: 22),
           Obx(() => TextField(
-            controller: controller.emailController,
-            onChanged: (v) => controller.email.value = v,
-            keyboardType: TextInputType.emailAddress,
-            decoration: InputDecoration(
-              labelText: 'Correo institucional',
-              hintText: 'usuario@uninorte.edu.co',
-              prefixIcon: const Icon(Icons.email_outlined),
-              errorText: controller.emailError.value,
-            ),
-          )),
-          
-          const SizedBox(height: 16),
-          
-          Obx(() => TextField(
-            controller: controller.passwordController,
-            obscureText: controller.obscurePassword.value,
-            onChanged: (v) => controller.password.value = v,
-            decoration: InputDecoration(
-              labelText: 'Contraseña',
-              prefixIcon: const Icon(Icons.lock_outlined),
-              errorText: controller.passwordError.value,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  controller.obscurePassword.value
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
+                controller: controller.emailController,
+                onChanged: (v) => controller.email.value = v,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: 'Correo institucional',
+                  hintText: 'usuario@uninorte.edu.co',
+                  prefixIcon: const Icon(Icons.email_outlined),
+                  errorText: controller.emailError.value,
                 ),
-                onPressed: controller.togglePasswordVisibility,
-              ),
-            ),
-          )),
-          
-          const SizedBox(height: 8),
-          
+              )),
+          const SizedBox(height: 14),
+          Obx(() => TextField(
+                controller: controller.passwordController,
+                obscureText: controller.obscurePassword.value,
+                onChanged: (v) => controller.password.value = v,
+                decoration: InputDecoration(
+                  labelText: 'Contraseña',
+                  prefixIcon: const Icon(Icons.lock_outlined),
+                  errorText: controller.passwordError.value,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      controller.obscurePassword.value
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                    ),
+                    onPressed: controller.togglePasswordVisibility,
+                  ),
+                ),
+              )),
+          const SizedBox(height: 4),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: controller.forgotPassword,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              ),
               child: const Text(
                 '¿Olvidaste tu contraseña?',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(fontSize: 13),
               ),
             ),
           ),
@@ -199,51 +194,50 @@ class _LoginViewState extends State<LoginView> {
 
   Widget _buildLoginButton() {
     return Obx(() => SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: controller.isLoading.value
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.primary,
-              ),
-            )
-          : ElevatedButton(
-              onPressed: controller.login,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 3,
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Ingresar',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+          width: double.infinity,
+          height: 54,
+          child: controller.isLoading.value
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary,
+                  ),
+                )
+              : ElevatedButton(
+                  onPressed: controller.login,
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  SizedBox(width: 8),
-                  Icon(Icons.arrow_forward_rounded, color: Colors.white),
-                ],
-              ),
-            ),
-    ));
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Ingresar',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Icon(Icons.arrow_forward_rounded,
+                          color: Colors.white, size: 20),
+                    ],
+                  ),
+                ),
+        ));
   }
 
   Widget _buildRegisterLink() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
+        const Text(
           '¿No tienes cuenta?',
           style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 15,
+            color: AppColors.textMuted,
+            fontSize: 14,
           ),
         ),
         TextButton(
@@ -252,7 +246,7 @@ class _LoginViewState extends State<LoginView> {
             'Crear cuenta',
             style: TextStyle(
               color: AppColors.primary,
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
           ),

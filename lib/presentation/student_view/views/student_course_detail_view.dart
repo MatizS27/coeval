@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/theme.dart';
 import '../../../domain/entities/academic_entities.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../controllers/student_home_controller.dart';
@@ -12,7 +13,8 @@ class StudentCourseDetailView extends StatefulWidget {
   const StudentCourseDetailView({super.key, required this.course});
 
   @override
-  State<StudentCourseDetailView> createState() => _StudentCourseDetailViewState();
+  State<StudentCourseDetailView> createState() =>
+      _StudentCourseDetailViewState();
 }
 
 class _StudentCourseDetailViewState extends State<StudentCourseDetailView> {
@@ -32,32 +34,52 @@ class _StudentCourseDetailViewState extends State<StudentCourseDetailView> {
     _isLoading.value = true;
     try {
       final allPending = await _controller.getPendingEvaluations();
-      final forThisCourse = allPending.where((p) => 
-        p.cycle.courseId == widget.course.id
-      ).toList();
+      final forThisCourse = allPending
+          .where((p) => p.cycle.courseId == widget.course.id)
+          .toList();
       _pendingEvaluations.assignAll(forThisCourse);
     } finally {
       _isLoading.value = false;
     }
   }
 
-  String get _currentEmail => 
+  String get _currentEmail =>
       _authController.currentUser.value?.email.trim().toLowerCase() ?? '';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F3F5),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2D2D2D),
-        elevation: 0,
-        title: Text(widget.course.name, style: const TextStyle(color: Colors.white)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              widget.course.name,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              'NRC ${widget.course.nrc} · ${widget.course.term}',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w400,
+                color: Colors.white70,
+              ),
+            ),
+          ],
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: _loadPendingEvaluations,
+        color: AppColors.primary,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -71,11 +93,43 @@ class _StudentCourseDetailViewState extends State<StudentCourseDetailView> {
     );
   }
 
+  Widget _sectionHeader({
+    required IconData icon,
+    required String title,
+    Widget? trailing,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 22,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Icon(icon, color: AppColors.textPrimary, size: 20),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ),
+        ?trailing,
+      ],
+    );
+  }
+
   Widget _buildPendingEvaluationsSection() {
     return Obx(() {
       if (_isLoading.value) {
         return const Card(
-          elevation: 0,
           child: Padding(
             padding: EdgeInsets.all(24),
             child: Center(child: CircularProgressIndicator()),
@@ -84,84 +138,64 @@ class _StudentCourseDetailViewState extends State<StudentCourseDetailView> {
       }
 
       return Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.assignment_outlined,
-                    color: Color(0xFFF76900),
-                    size: 24,
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Evaluaciones Pendientes',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2D2D2D),
-                    ),
-                  ),
-                  const Spacer(),
-                  if (_pendingEvaluations.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF76900),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${_pendingEvaluations.length}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+              _sectionHeader(
+                icon: Icons.assignment_outlined,
+                title: 'Evaluaciones pendientes',
+                trailing: _pendingEvaluations.isNotEmpty
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
                         ),
-                      ),
-                    ),
-                ],
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${_pendingEvaluations.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      )
+                    : null,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               if (_pendingEvaluations.isEmpty)
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8F8F8),
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppColors.successSoft,
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
                     children: [
-                      Icon(
-                        Icons.check_circle_outline,
+                      const Icon(
+                        Icons.check_circle_outline_rounded,
                         size: 40,
-                        color: Colors.green.shade400,
+                        color: AppColors.success,
                       ),
                       const SizedBox(height: 8),
-                      Text(
+                      const Text(
                         'No tienes evaluaciones pendientes',
                         style: TextStyle(
-                          color: Colors.grey.shade700,
-                          fontWeight: FontWeight.w500,
+                          color: AppColors.success,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
                 )
               else
-                ..._pendingEvaluations.map((pending) {
-                  return _buildPendingEvaluationCard(pending);
-                }),
+                ..._pendingEvaluations.map(_buildPendingEvaluationCard),
             ],
           ),
         ),
@@ -173,24 +207,23 @@ class _StudentCourseDetailViewState extends State<StudentCourseDetailView> {
     final pendingCount = pending.pendingCount;
     final totalPeers = pending.peersToEvaluate.length;
     final completedCount = totalPeers - pendingCount;
+    final isPending = pendingCount > 0;
+    final accent = isPending ? AppColors.primary : AppColors.success;
+    final accentSoft =
+        isPending ? AppColors.primarySoft : AppColors.successSoft;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F8F8),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: pendingCount > 0 
-              ? const Color(0xFFF76900).withOpacity(0.3)
-              : Colors.green.withOpacity(0.3),
-          width: 1,
-        ),
+        color: AppColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withValues(alpha: 0.3)),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: pendingCount > 0
+          borderRadius: BorderRadius.circular(12),
+          onTap: isPending
               ? () async {
                   await Get.to(() => EvaluatePeersView(pendingInfo: pending));
                   _loadPendingEvaluations();
@@ -207,9 +240,9 @@ class _StudentCourseDetailViewState extends State<StudentCourseDetailView> {
                       child: Text(
                         pending.cycle.title,
                         style: const TextStyle(
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           fontSize: 14,
-                          color: Color(0xFF2D2D2D),
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -219,21 +252,17 @@ class _StudentCourseDetailViewState extends State<StudentCourseDetailView> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: pendingCount > 0 
-                            ? const Color(0xFFF76900).withOpacity(0.1)
-                            : Colors.green.withOpacity(0.1),
+                        color: accentSoft,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        pendingCount > 0 
+                        isPending
                             ? '$pendingCount pendiente${pendingCount > 1 ? 's' : ''}'
                             : 'Completada',
                         style: TextStyle(
                           fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: pendingCount > 0 
-                              ? const Color(0xFFF76900)
-                              : Colors.green.shade700,
+                          fontWeight: FontWeight.w700,
+                          color: accent,
                         ),
                       ),
                     ),
@@ -241,38 +270,54 @@ class _StudentCourseDetailViewState extends State<StudentCourseDetailView> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${pending.categoryName} - ${pending.group.name}',
-                  style: TextStyle(
+                  '${pending.categoryName} · ${pending.group.name}',
+                  style: const TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade600,
+                    color: AppColors.textMuted,
                   ),
                 ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: totalPeers > 0 ? completedCount / totalPeers : 0,
-                  backgroundColor: Colors.grey.shade300,
-                  valueColor: AlwaysStoppedAnimation(
-                    pendingCount > 0 ? const Color(0xFFF76900) : Colors.green,
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: LinearProgressIndicator(
+                    value: totalPeers > 0 ? completedCount / totalPeers : 0,
+                    minHeight: 6,
+                    backgroundColor: AppColors.divider,
+                    valueColor: AlwaysStoppedAnimation(accent),
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  '$completedCount de $totalPeers compañeros evaluados',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-                if (pending.cycle.closesAt != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Cierra: ${_formatDate(pending.cycle.closesAt!)}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade500,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '$completedCount de $totalPeers compañeros evaluados',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                      ),
                     ),
-                  ),
-                ],
+                    if (pending.cycle.closesAt != null)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.schedule_rounded,
+                            size: 11,
+                            color: AppColors.textMuted,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            _formatDate(pending.cycle.closesAt!),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -284,9 +329,8 @@ class _StudentCourseDetailViewState extends State<StudentCourseDetailView> {
   Widget _buildMyGroupsSection() {
     final myCategories = widget.course.categories.where((cat) {
       return cat.groups.any((group) {
-        return group.students.any((s) => 
-          s.email.trim().toLowerCase() == _currentEmail
-        );
+        return group.students
+            .any((s) => s.email.trim().toLowerCase() == _currentEmail);
       });
     }).toList();
 
@@ -295,50 +339,32 @@ class _StudentCourseDetailViewState extends State<StudentCourseDetailView> {
     }
 
     return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
-              children: [
-                Icon(
-                  Icons.group_outlined,
-                  color: Color(0xFF2D2D2D),
-                  size: 24,
-                ),
-                SizedBox(width: 8),
-                Text(
-                  'Mis Grupos',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF2D2D2D),
-                  ),
-                ),
-              ],
+            _sectionHeader(
+              icon: Icons.group_outlined,
+              title: 'Mis grupos',
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             ...myCategories.map((category) {
               final myGroups = category.groups.where((group) {
-                return group.students.any((s) => 
-                  s.email.trim().toLowerCase() == _currentEmail
-                );
+                return group.students
+                    .any((s) => s.email.trim().toLowerCase() == _currentEmail);
               }).toList();
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    category.name,
+                    category.name.toUpperCase(),
                     style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF555555),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textSecondary,
+                      letterSpacing: 0.6,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -347,44 +373,65 @@ class _StudentCourseDetailViewState extends State<StudentCourseDetailView> {
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8F8F8),
+                        color: AppColors.surfaceAlt,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            '${group.name} (${group.code})',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w500,
-                              fontSize: 13,
-                            ),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.group_work_outlined,
+                                size: 14,
+                                color: AppColors.textSecondary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${group.name} (${group.code})',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
                           ...group.students.map((student) {
-                            final isMe = student.email.trim().toLowerCase() == _currentEmail;
+                            final isMe = student.email.trim().toLowerCase() ==
+                                _currentEmail;
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
+                              padding: const EdgeInsets.only(bottom: 6),
                               child: Row(
                                 children: [
-                                  Icon(
-                                    isMe ? Icons.person : Icons.person_outline,
-                                    size: 16,
-                                    color: isMe 
-                                        ? const Color(0xFFF76900)
-                                        : Colors.grey.shade600,
+                                  CircleAvatar(
+                                    radius: 12,
+                                    backgroundColor: isMe
+                                        ? AppColors.primarySoft
+                                        : AppColors.divider,
+                                    child: Text(
+                                      _initials(student.name, student.email),
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        color: isMe
+                                            ? AppColors.primary
+                                            : AppColors.textSecondary,
+                                      ),
+                                    ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
                                       '${student.name.isEmpty ? student.email : student.name}${isMe ? ' (Tú)' : ''}',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: isMe 
-                                            ? const Color(0xFFF76900)
-                                            : Colors.grey.shade700,
-                                        fontWeight: isMe 
-                                            ? FontWeight.w600 
+                                        color: isMe
+                                            ? AppColors.primary
+                                            : AppColors.textSecondary,
+                                        fontWeight: isMe
+                                            ? FontWeight.w700
                                             : FontWeight.normal,
                                       ),
                                     ),
@@ -397,7 +444,7 @@ class _StudentCourseDetailViewState extends State<StudentCourseDetailView> {
                       ),
                     );
                   }),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                 ],
               );
             }),
@@ -405,6 +452,17 @@ class _StudentCourseDetailViewState extends State<StudentCourseDetailView> {
         ),
       ),
     );
+  }
+
+  String _initials(String name, String email) {
+    if (name.isNotEmpty) {
+      final parts = name.trim().split(RegExp(r'\s+'));
+      if (parts.length >= 2 && parts[0].isNotEmpty && parts[1].isNotEmpty) {
+        return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+      }
+      return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
+    }
+    return email.substring(0, email.length >= 2 ? 2 : 1).toUpperCase();
   }
 
   String _formatDate(DateTime date) {

@@ -28,11 +28,10 @@ class _RegisterViewState extends State<RegisterView> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        foregroundColor: AppColors.textPrimary,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_rounded,
-            color: AppColors.textPrimary,
-          ),
+          icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
           onPressed: () => Get.back(),
         ),
       ),
@@ -44,20 +43,13 @@ class _RegisterViewState extends State<RegisterView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(),
-
-                const SizedBox(height: 32),
-
+                const SizedBox(height: 28),
                 _buildRegistrationForm(),
-
-                const SizedBox(height: 32),
-
+                const SizedBox(height: 24),
                 _buildRegisterButton(),
-
-                const SizedBox(height: 20),
-
+                const SizedBox(height: 12),
                 _buildLoginLink(),
-
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
               ],
             ),
           ),
@@ -70,18 +62,35 @@ class _RegisterViewState extends State<RegisterView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.primarySoft,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Text(
+            'NUEVO USUARIO',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primary,
+              letterSpacing: 0.8,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
         const Text(
-          'Crear Cuenta',
+          'Crear cuenta',
           style: TextStyle(
             fontSize: 28,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
+        const SizedBox(height: 6),
+        const Text(
           'Regístrate como estudiante con tu cuenta institucional',
-          style: TextStyle(fontSize: 15, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 14, color: AppColors.textMuted),
         ),
       ],
     );
@@ -89,15 +98,16 @@ class _RegisterViewState extends State<RegisterView> {
 
   Widget _buildRegistrationForm() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.borderSoft),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 5),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -105,16 +115,14 @@ class _RegisterViewState extends State<RegisterView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Información Personal',
+            'Información personal',
             style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
             ),
           ),
-
-          const SizedBox(height: 20),
-
+          const SizedBox(height: 18),
           Obx(
             () => TextField(
               controller: controller.nameController,
@@ -128,9 +136,7 @@ class _RegisterViewState extends State<RegisterView> {
               ),
             ),
           ),
-
-          const SizedBox(height: 16),
-
+          const SizedBox(height: 14),
           Obx(
             () => TextField(
               controller: controller.emailController,
@@ -144,9 +150,7 @@ class _RegisterViewState extends State<RegisterView> {
               ),
             ),
           ),
-
-          const SizedBox(height: 16),
-
+          const SizedBox(height: 14),
           Obx(
             () => TextField(
               controller: controller.passwordController,
@@ -177,7 +181,7 @@ class _RegisterViewState extends State<RegisterView> {
     return Obx(
       () => SizedBox(
         width: double.infinity,
-        height: 56,
+        height: 54,
         child: controller.isLoading.value
             ? const Center(
                 child: CircularProgressIndicator(color: AppColors.primary),
@@ -185,11 +189,9 @@ class _RegisterViewState extends State<RegisterView> {
             : ElevatedButton(
                 onPressed: controller.register,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  elevation: 3,
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -197,13 +199,14 @@ class _RegisterViewState extends State<RegisterView> {
                     Text(
                       'Crear cuenta',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
                     ),
                     SizedBox(width: 8),
-                    Icon(Icons.arrow_forward_rounded, color: Colors.white),
+                    Icon(Icons.arrow_forward_rounded,
+                        color: Colors.white, size: 20),
                   ],
                 ),
               ),
@@ -215,9 +218,9 @@ class _RegisterViewState extends State<RegisterView> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
+        const Text(
           '¿Ya tienes cuenta?',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
+          style: TextStyle(color: AppColors.textMuted, fontSize: 14),
         ),
         TextButton(
           onPressed: () => Get.offAllNamed('/login'),
@@ -225,7 +228,7 @@ class _RegisterViewState extends State<RegisterView> {
             'Iniciar sesión',
             style: TextStyle(
               color: AppColors.primary,
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
           ),
