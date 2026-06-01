@@ -38,11 +38,11 @@ void main() {
   tearDown(() => Get.reset());
 
   group('TeacherHomeView - Pruebas de Nivel 1', () {
-    testWidgets('Debe mostrar el título "My Courses" y botón de logout', (WidgetTester tester) async {
+    testWidgets('Debe mostrar el título "Mis cursos" y botón de logout', (WidgetTester tester) async {
       await tester.pumpWidget(const GetMaterialApp(home: TeacherHomeView()));
 
-      expect(find.text('My Courses'), findsOneWidget);
-      expect(find.byIcon(Icons.logout), findsOneWidget);
+      expect(find.text('Mis cursos'), findsOneWidget);
+      expect(find.byTooltip('Cerrar sesión'), findsOneWidget);
     });
 
     testWidgets('Debe mostrar CircularProgressIndicator al cargar cursos', (WidgetTester tester) async {
@@ -79,7 +79,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Curso Docente Test'), findsOneWidget);
-      expect(find.text('NRC 9988 · 202410'), findsOneWidget);
+      expect(find.text('NRC 9988'), findsOneWidget);
+      expect(find.text('202410'), findsOneWidget);
       expect(find.text('2 categorías'), findsOneWidget);
       expect(find.text('4 grupos'), findsOneWidget);
     });
@@ -95,11 +96,36 @@ void main() {
       expect(find.widgetWithText(TextField, 'NRC'), findsOneWidget);
     });
 
+    testWidgets('Debe llamar a createCourse cuando se completa el formulario de nuevo curso', (WidgetTester tester) async {
+      when(() => mockTeacherController.createCourse(
+        name: 'Curso Prueba',
+        nrc: '1234',
+        term: '2026-1',
+      )).thenAnswer((_) async {});
+
+      await tester.pumpWidget(const GetMaterialApp(home: TeacherHomeView()));
+
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.widgetWithText(TextField, 'Nombre'), 'Curso Prueba');
+      await tester.enterText(find.widgetWithText(TextField, 'NRC'), '1234');
+      await tester.enterText(find.widgetWithText(TextField, 'Periodo'), '2026-1');
+      await tester.tap(find.text('Crear'));
+      await tester.pumpAndSettle();
+
+      verify(() => mockTeacherController.createCourse(
+        name: 'Curso Prueba',
+        nrc: '1234',
+        term: '2026-1',
+      )).called(1);
+    });
+
     testWidgets('Debe llamar al logout del AuthController al pulsar el botón de salida', (WidgetTester tester) async {
       await tester.pumpWidget(const GetMaterialApp(home: TeacherHomeView()));
       await tester.pump();
       
-      await tester.tap(find.byIcon(Icons.logout));
+      await tester.tap(find.byTooltip('Cerrar sesión'));
       await tester.pump();
       
       verify(() => mockAuthController.logout()).called(1);

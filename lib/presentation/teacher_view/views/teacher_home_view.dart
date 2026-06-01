@@ -148,6 +148,16 @@ class TeacherHomeView extends StatelessWidget {
                 final term = termCtrl.text.trim();
 
                 if (name.isEmpty || nrc.isEmpty || term.isEmpty) {
+                  Get.snackbar(
+                    'Error',
+                    'Todos los campos son obligatorios.',
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: Colors.red.shade100,
+                    colorText: Colors.red.shade900,
+                    margin: const EdgeInsets.all(16),
+                    borderRadius: 12,
+                    icon: const Icon(Icons.error_outline, color: Colors.red),
+                  );
                   return;
                 }
 
