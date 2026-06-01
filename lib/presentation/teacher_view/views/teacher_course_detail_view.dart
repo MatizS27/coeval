@@ -317,9 +317,22 @@ class _TeacherCourseDetailViewState extends State<TeacherCourseDetailView>
             );
           }
 
-          final cyclesByGroup = <String, List<EvaluationCycleData>>{};
+          // Group cycles by categoryId; for legacy groupId-based cycles,
+          // resolve the category from the course data
+          final cyclesByCategory = <String, List<EvaluationCycleData>>{};
           for (final cycle in _evaluationCycles) {
-            cyclesByGroup.putIfAbsent(cycle.groupId, () => []).add(cycle);
+            if (cycle.categoryId.isNotEmpty) {
+              cyclesByCategory
+                  .putIfAbsent(cycle.categoryId, () => [])
+                  .add(cycle);
+            } else if (cycle.groupId.isNotEmpty) {
+              for (final cat in widget.course.categories) {
+                if (cat.groups.any((g) => g.id == cycle.groupId)) {
+                  cyclesByCategory.putIfAbsent(cat.id, () => []).add(cycle);
+                  break;
+                }
+              }
+            }
           }
 
           return RefreshIndicator(
@@ -330,6 +343,8 @@ class _TeacherCourseDetailViewState extends State<TeacherCourseDetailView>
               itemCount: widget.course.categories.length,
               itemBuilder: (context, catIndex) {
                 final category = widget.course.categories[catIndex];
+                final categoryCycles =
+                    cyclesByCategory[category.id] ?? const [];
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,95 +362,55 @@ class _TeacherCourseDetailViewState extends State<TeacherCourseDetailView>
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            category.name.toUpperCase(),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                              letterSpacing: 0.6,
-                              color: AppColors.textSecondary,
+                          Expanded(
+                            child: Text(
+                              category.name.toUpperCase(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                                letterSpacing: 0.6,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceAlt,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${categoryCycles.length} eval.',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    ...category.groups.map((group) {
-                      final groupCycles = cyclesByGroup[group.id] ?? [];
-
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            group.name,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 15,
-                                              color: AppColors.textPrimary,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            '${group.code} · ${group.activeStudentsCount} estudiantes',
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: AppColors.textMuted,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surfaceAlt,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        '${groupCycles.length} eval.',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (groupCycles.isEmpty) ...[
-                                  const SizedBox(height: 10),
-                                  const Text(
-                                    'Sin evaluaciones para este grupo',
-                                    style: TextStyle(
-                                      color: AppColors.textMuted,
-                                      fontSize: 12,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ] else ...[
-                                  const SizedBox(height: 12),
-                                  ...groupCycles.map(_buildCycleItem),
-                                ],
-                              ],
-                            ),
+                    if (categoryCycles.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+                        child: Text(
+                          'Sin evaluaciones para esta categoría',
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 12,
+                            fontStyle: FontStyle.italic,
                           ),
                         ),
-                      );
-                    }),
+                      )
+                    else
+                      ...categoryCycles.map((cycle) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _buildCycleItem(cycle),
+                          )),
                     const SizedBox(height: 6),
                   ],
                 );
@@ -534,8 +509,53 @@ class _TeacherCourseDetailViewState extends State<TeacherCourseDetailView>
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: cycle.evaluationScope ==
+                                EvaluationScope.allGroups
+                            ? const Color(0xFFE8F4FD)
+                            : AppColors.primarySoft,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            cycle.evaluationScope == EvaluationScope.allGroups
+                                ? Icons.account_tree_rounded
+                                : Icons.group_rounded,
+                            size: 11,
+                            color: cycle.evaluationScope ==
+                                    EvaluationScope.allGroups
+                                ? const Color(0xFF1976D2)
+                                : AppColors.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            cycle.evaluationScope.label,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: cycle.evaluationScope ==
+                                      EvaluationScope.allGroups
+                                  ? const Color(0xFF1976D2)
+                                  : AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
                 if (cycle.rubrics.isNotEmpty) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Wrap(
                     spacing: 6,
                     runSpacing: 4,
@@ -544,14 +564,14 @@ class _TeacherCourseDetailViewState extends State<TeacherCourseDetailView>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppColors.primarySoft,
+                          color: AppColors.surfaceAlt,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           rubric,
                           style: const TextStyle(
                             fontSize: 11,
-                            color: AppColors.primary,
+                            color: AppColors.textSecondary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -646,14 +666,9 @@ class _TeacherCourseDetailViewState extends State<TeacherCourseDetailView>
   }
 
   void _showCreateEvaluationDialog(BuildContext context) {
-    final groupsWithCategory = <({GroupOverview group, String categoryName})>[];
-    for (final cat in widget.course.categories) {
-      for (final group in cat.groups) {
-        groupsWithCategory.add((group: group, categoryName: cat.name));
-      }
-    }
+    final categories = widget.course.categories;
 
-    if (groupsWithCategory.isEmpty) {
+    if (categories.isEmpty) {
       Get.snackbar(
         'Error',
         'Debes crear categorías y grupos antes de crear evaluaciones',
@@ -668,9 +683,8 @@ class _TeacherCourseDetailViewState extends State<TeacherCourseDetailView>
 
     final titleCtrl = TextEditingController();
     final rubricCtrl = TextEditingController();
-    final selectedGroupEntry = Rx<({GroupOverview group, String categoryName})?>(
-      groupsWithCategory.first,
-    );
+    final selectedCategory = Rx<CategoryOverview>(categories.first);
+    final selectedScope = Rx<EvaluationScope>(EvaluationScope.ownGroup);
     final selectedDate = Rxn<DateTime>();
     final rubrics = <String>[].obs;
 
@@ -718,6 +732,7 @@ class _TeacherCourseDetailViewState extends State<TeacherCourseDetailView>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Title
                   TextField(
                     controller: titleCtrl,
                     decoration: const InputDecoration(
@@ -726,33 +741,114 @@ class _TeacherCourseDetailViewState extends State<TeacherCourseDetailView>
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _formLabel('Grupo'),
+
+                  // Activity / Category
+                  _formLabel('Actividad'),
                   const SizedBox(height: 8),
                   Obx(() {
                     return DropdownButtonFormField<int>(
-                      initialValue:
-                          groupsWithCategory.indexOf(selectedGroupEntry.value!),
+                      value: categories.indexOf(selectedCategory.value),
                       isExpanded: true,
-                      items: groupsWithCategory.asMap().entries.map((entry) {
-                        final idx = entry.key;
-                        final item = entry.value;
+                      items: categories.asMap().entries.map((entry) {
+                        final cat = entry.value;
                         return DropdownMenuItem(
-                          value: idx,
+                          value: entry.key,
                           child: Text(
-                            '${item.categoryName} > ${item.group.name}',
+                            '${cat.name} · ${cat.activeStudentsCount} est.',
                             overflow: TextOverflow.ellipsis,
                           ),
                         );
                       }).toList(),
                       onChanged: (idx) {
                         if (idx != null) {
-                          selectedGroupEntry.value = groupsWithCategory[idx];
+                          selectedCategory.value = categories[idx];
                         }
                       },
                     );
                   }),
                   const SizedBox(height: 16),
-                  _formLabel('Rúbrica (criterios a evaluar)'),
+
+                  // Scope
+                  _formLabel('Alcance de la evaluación'),
+                  const SizedBox(height: 8),
+                  Obx(() {
+                    return Column(
+                      children: EvaluationScope.values.map((scope) {
+                        final active = selectedScope.value == scope;
+                        return GestureDetector(
+                          onTap: () => selectedScope.value = scope,
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: active
+                                    ? AppColors.primary
+                                    : AppColors.divider,
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                              color: active
+                                  ? AppColors.primarySoft
+                                  : AppColors.surface,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  scope == EvaluationScope.allGroups
+                                      ? Icons.account_tree_rounded
+                                      : Icons.group_rounded,
+                                  size: 18,
+                                  color: active
+                                      ? AppColors.primary
+                                      : AppColors.textMuted,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        scope.label,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: active
+                                              ? AppColors.primary
+                                              : AppColors.textPrimary,
+                                        ),
+                                      ),
+                                      Text(
+                                        scope.description,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textMuted,
+                                          height: 1.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (active)
+                                  const Icon(
+                                    Icons.check_circle_rounded,
+                                    size: 18,
+                                    color: AppColors.primary,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  }),
+                  const SizedBox(height: 8),
+
+                  // Rubrics
+                  _formLabel('Criterios de evaluación'),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -816,9 +912,7 @@ class _TeacherCourseDetailViewState extends State<TeacherCourseDetailView>
                             style: const TextStyle(fontSize: 12),
                           ),
                           deleteIcon: const Icon(Icons.close, size: 14),
-                          onDeleted: () {
-                            rubrics.removeAt(entry.key);
-                          },
+                          onDeleted: () => rubrics.removeAt(entry.key),
                           backgroundColor: AppColors.primarySoft,
                           labelStyle: const TextStyle(
                             color: AppColors.primary,
@@ -834,6 +928,8 @@ class _TeacherCourseDetailViewState extends State<TeacherCourseDetailView>
                     );
                   }),
                   const SizedBox(height: 16),
+
+                  // Close date
                   _formLabel('Fecha de cierre (opcional)'),
                   const SizedBox(height: 8),
                   Obx(() {
@@ -845,14 +941,14 @@ class _TeacherCourseDetailViewState extends State<TeacherCourseDetailView>
                           initialDate:
                               DateTime.now().add(const Duration(days: 7)),
                           firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(
-                            const Duration(days: 365),
-                          ),
+                          lastDate: DateTime.now()
+                              .add(const Duration(days: 365)),
                         );
                         if (date != null) {
                           final time = await showTimePicker(
                             context: dialogContext,
-                            initialTime: const TimeOfDay(hour: 23, minute: 59),
+                            initialTime:
+                                const TimeOfDay(hour: 23, minute: 59),
                           );
                           if (time != null) {
                             selectedDate.value = DateTime(
@@ -921,27 +1017,23 @@ class _TeacherCourseDetailViewState extends State<TeacherCourseDetailView>
               final canCreate = rubrics.isNotEmpty;
               return ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: canCreate
-                      ? AppColors.primary
-                      : AppColors.divider,
+                  backgroundColor:
+                      canCreate ? AppColors.primary : AppColors.divider,
                   disabledBackgroundColor: AppColors.divider,
                   foregroundColor: Colors.white,
                 ),
                 onPressed: canCreate
                     ? () async {
                         final title = titleCtrl.text.trim();
-                        final entry = selectedGroupEntry.value;
-
-                        if (title.isEmpty || entry == null) {
-                          return;
-                        }
+                        if (title.isEmpty) return;
 
                         Navigator.of(dialogContext).pop();
                         await _controller.createEvaluationCycle(
                           courseId: widget.course.id,
-                          groupId: entry.group.id,
+                          categoryId: selectedCategory.value.id,
                           title: title,
                           rubrics: rubrics.toList(),
+                          evaluationScope: selectedScope.value,
                           closesAt: selectedDate.value,
                         );
                         await _loadEvaluationCycles();

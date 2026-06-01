@@ -261,9 +261,10 @@ class TeacherHomeController extends GetxController {
 
   Future<void> createEvaluationCycle({
     required String courseId,
-    required String groupId,
+    required String categoryId,
     required String title,
     required List<String> rubrics,
+    required EvaluationScope evaluationScope,
     DateTime? closesAt,
   }) async {
     final teacherOwner = primaryTeacherOwner;
@@ -276,10 +277,11 @@ class TeacherHomeController extends GetxController {
     try {
       final cycle = await _createEvaluationCycleUseCase(
         courseId: courseId,
-        groupId: groupId,
+        categoryId: categoryId,
         title: title,
         openedBy: teacherOwner,
         rubrics: rubrics,
+        evaluationScope: evaluationScope,
         closesAt: closesAt,
       );
 

@@ -26,10 +26,11 @@ abstract class AcademicRepository {
 
   Future<EvaluationCycleData?> createEvaluationCycle({
     required String courseId,
-    required String groupId,
+    required String categoryId,
     required String title,
     required String openedBy,
     required List<String> rubrics,
+    required EvaluationScope evaluationScope,
     DateTime? closesAt,
   });
 

@@ -58,18 +58,20 @@ class AcademicRepositoryImpl implements AcademicRepository {
   @override
   Future<EvaluationCycleData?> createEvaluationCycle({
     required String courseId,
-    required String groupId,
+    required String categoryId,
     required String title,
     required String openedBy,
     required List<String> rubrics,
+    required EvaluationScope evaluationScope,
     DateTime? closesAt,
   }) {
     return _remoteDatasource.createEvaluationCycle(
       courseId: courseId,
-      groupId: groupId,
+      categoryId: categoryId,
       title: title,
       openedBy: openedBy,
       rubrics: rubrics,
+      evaluationScope: evaluationScope,
       closesAt: closesAt,
     );
   }

@@ -74,18 +74,20 @@ class CreateEvaluationCycleUseCase {
 
   Future<EvaluationCycleData?> call({
     required String courseId,
-    required String groupId,
+    required String categoryId,
     required String title,
     required String openedBy,
     required List<String> rubrics,
+    required EvaluationScope evaluationScope,
     DateTime? closesAt,
   }) {
     return _repository.createEvaluationCycle(
       courseId: courseId,
-      groupId: groupId,
+      categoryId: categoryId,
       title: title,
       openedBy: openedBy,
       rubrics: rubrics,
+      evaluationScope: evaluationScope,
       closesAt: closesAt,
     );
   }

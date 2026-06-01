@@ -78,27 +78,51 @@ class CsvSyncResult {
   });
 }
 
+enum EvaluationScope {
+  ownGroup,
+  allGroups;
+
+  static EvaluationScope fromString(String? value) {
+    if (value == 'all_groups') return EvaluationScope.allGroups;
+    return EvaluationScope.ownGroup;
+  }
+
+  String get apiValue =>
+      this == EvaluationScope.allGroups ? 'all_groups' : 'own_group';
+
+  String get label =>
+      this == EvaluationScope.allGroups ? 'Todos los grupos' : 'Compañeros de grupo';
+
+  String get description => this == EvaluationScope.allGroups
+      ? 'Cada estudiante evalúa a integrantes de todos los demás grupos de la categoría'
+      : 'Cada estudiante evalúa solo a los integrantes de su propio grupo';
+}
+
 class EvaluationCycleData {
   final String id;
   final String courseId;
   final String groupId;
+  final String categoryId;
   final String title;
   final String status;
   final String openedBy;
   final DateTime openedAt;
   final DateTime? closesAt;
   final List<String> rubrics;
+  final EvaluationScope evaluationScope;
 
   EvaluationCycleData({
     required this.id,
     required this.courseId,
-    required this.groupId,
+    this.groupId = '',
+    this.categoryId = '',
     required this.title,
     required this.status,
     required this.openedBy,
     required this.openedAt,
     this.closesAt,
     this.rubrics = const [],
+    this.evaluationScope = EvaluationScope.ownGroup,
   });
 
   bool get isOpen => status.toLowerCase() == 'open';

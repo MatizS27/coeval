@@ -8,6 +8,7 @@ import 'package:coeval/data/datasources/dashboard_remote_datasource.dart';
 import 'package:coeval/data/datasources/roble_datasource.dart';
 import 'package:coeval/data/repositories/academic_repository_impl.dart';
 import 'package:coeval/data/repositories/dashboard_repository_impl.dart';
+import 'package:coeval/domain/entities/academic_entities.dart';
 
 void main() {
   group('Nivel 3 - Integracion flujo profesor/estudiante', () {
@@ -184,14 +185,15 @@ void main() {
       expect(teacherCourses.first.categories, isNotEmpty);
       expect(teacherCourses.first.categories.first.groups, isNotEmpty);
 
-      final groupId = teacherCourses.first.categories.first.groups.first.id;
+      final categoryId = teacherCourses.first.categories.first.id;
 
       final cycle = await academicRepository.createEvaluationCycle(
         courseId: courseId,
-        groupId: groupId,
+        categoryId: categoryId,
         title: 'Actividad 1',
         openedBy: 'teacher@uninorte.edu.co',
         rubrics: const ['Puntualidad', 'Compromiso'],
+        evaluationScope: EvaluationScope.ownGroup,
       );
 
       expect(cycle, isNotNull);

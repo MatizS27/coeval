@@ -878,23 +878,30 @@ class AcademicRemoteDatasource {
 
   Future<EvaluationCycleData?> createEvaluationCycle({
     required String courseId,
-    required String groupId,
+    required String categoryId,
     required String title,
     required String openedBy,
     required List<String> rubrics,
+    required EvaluationScope evaluationScope,
     DateTime? closesAt,
   }) async {
     final now = DateTime.now().toUtc();
-    
+
+    // ROBLE schema only allows pre-defined columns for evaluation_cycles.
+    // categoryId is stored in the groupId column; evaluationScope goes inside
+    // the criteria JSON alongside rubrics. This matches the RN datasource.
     final inserted = await _insertRecord(_evaluationCyclesTable, {
       'courseId': courseId,
-      'groupId': groupId,
+      'groupId': categoryId,
       'title': title,
       'openedBy': openedBy,
       'openedAt': now.toIso8601String(),
       'closeAt': closesAt?.toUtc().toIso8601String(),
       'status': 'open',
-      'criteria': {'rubrics': rubrics},
+      'criteria': {
+        'rubrics': rubrics,
+        'evaluationScope': evaluationScope.apiValue,
+      },
     });
 
     if (inserted == null) {
@@ -904,7 +911,7 @@ class AcademicRemoteDatasource {
     return EvaluationCycleData(
       id: _asString(inserted['_id']),
       courseId: _asString(inserted['courseId']),
-      groupId: _asString(inserted['groupId']),
+      categoryId: categoryId,
       title: _asString(inserted['title']),
       status: _asString(inserted['status']),
       openedBy: _asString(inserted['openedBy']),
@@ -913,6 +920,7 @@ class AcademicRemoteDatasource {
           ? null
           : _parseDate(inserted['closeAt']),
       rubrics: rubrics,
+      evaluationScope: evaluationScope,
     );
   }
 
@@ -940,19 +948,20 @@ class AcademicRemoteDatasource {
 
   EvaluationCycleData _mapRowToEvaluationCycle(Map<String, dynamic> row) {
     List<String> rubrics = [];
+    var parsedCriteria = <String, dynamic>{};
+
     final criteriaRaw = row['criteria'];
     if (criteriaRaw != null) {
       try {
-        Map<String, dynamic> criteriaMap;
         if (criteriaRaw is String) {
-          criteriaMap = jsonDecode(criteriaRaw);
+          parsedCriteria = Map<String, dynamic>.from(
+            jsonDecode(criteriaRaw) as Map,
+          );
         } else if (criteriaRaw is Map) {
-          criteriaMap = Map<String, dynamic>.from(criteriaRaw);
-        } else {
-          criteriaMap = {};
+          parsedCriteria = Map<String, dynamic>.from(criteriaRaw);
         }
-        if (criteriaMap['rubrics'] is List) {
-          rubrics = (criteriaMap['rubrics'] as List)
+        if (parsedCriteria['rubrics'] is List) {
+          rubrics = (parsedCriteria['rubrics'] as List)
               .map((e) => e.toString())
               .toList();
         }
@@ -961,16 +970,25 @@ class AcademicRemoteDatasource {
       }
     }
 
+    // New cycles store categoryId in the groupId column and evaluationScope
+    // inside criteria. Old cycles have a real groupId and no evaluationScope.
+    final storedGroupId = _asString(row['groupId']);
+    final isNewCycle = parsedCriteria.containsKey('evaluationScope');
+
     return EvaluationCycleData(
       id: _asString(row['_id']),
       courseId: _asString(row['courseId']),
-      groupId: _asString(row['groupId']),
+      groupId: isNewCycle ? '' : storedGroupId,
+      categoryId: isNewCycle ? storedGroupId : '',
       title: _asString(row['title']),
       status: _asString(row['status']),
       openedBy: _asString(row['openedBy']),
       openedAt: _parseDate(row['openedAt']),
       closesAt: row['closeAt'] == null ? null : _parseDate(row['closeAt']),
       rubrics: rubrics,
+      evaluationScope: EvaluationScope.fromString(
+        parsedCriteria['evaluationScope'] as String?,
+      ),
     );
   }
 
@@ -1110,13 +1128,39 @@ class AcademicRemoteDatasource {
       }
     }
 
+    // Old cycles: queried by actual groupId. New cycles: categoryId stored in
+    // groupId column, so queried by categoryId value (same column, new purpose).
+    final seenCycleIds = <String>{};
     final openCycles = <EvaluationCycleData>[];
-    for (final groupId in groupIds) {
+
+    // Legacy: find open cycles linked directly to the student's group
+    for (final gid in groupIds) {
       final cycleRows = await _readTable(
         _evaluationCyclesTable,
-        filters: {'groupId': groupId, 'status': 'open'},
+        filters: {'groupId': gid, 'status': 'open'},
       );
-      openCycles.addAll(cycleRows.map((r) => _mapRowToEvaluationCycle(r)));
+      for (final r in cycleRows) {
+        final cycle = _mapRowToEvaluationCycle(r);
+        // Only keep if it resolved as a legacy cycle (has real groupId)
+        if (cycle.groupId.isNotEmpty && seenCycleIds.add(cycle.id)) {
+          openCycles.add(cycle);
+        }
+      }
+    }
+
+    // New: find open cycles where categoryId is stored in the groupId column
+    for (final catId in categoryIds) {
+      final cycleRows = await _readTable(
+        _evaluationCyclesTable,
+        filters: {'groupId': catId, 'status': 'open'},
+      );
+      for (final r in cycleRows) {
+        final cycle = _mapRowToEvaluationCycle(r);
+        // Only keep if it resolved as a new cycle (has categoryId, no groupId)
+        if (cycle.categoryId.isNotEmpty && seenCycleIds.add(cycle.id)) {
+          openCycles.add(cycle);
+        }
+      }
     }
 
     if (openCycles.isEmpty) {
@@ -1126,22 +1170,100 @@ class AcademicRemoteDatasource {
     final result = <PendingEvaluationInfo>[];
 
     for (final cycle in openCycles) {
-      final groupId = cycle.groupId;
-      final groupData = groupsById[groupId];
-      
-      if (groupData == null) {
-        continue;
+      final List<Map<String, dynamic>> enrollmentsForCycle;
+      final String categoryId;
+      final String categoryName;
+      GroupOverview? studentGroupOverview;
+
+      if (cycle.groupId.isNotEmpty) {
+        // Legacy group-based cycle
+        final groupData = groupsById[cycle.groupId];
+        if (groupData == null) continue;
+        categoryId = _asString(groupData['categoryId']);
+        categoryName = categoriesById[categoryId] != null
+            ? _asString(categoriesById[categoryId]!['name'])
+            : '';
+        enrollmentsForCycle =
+            await _readActiveEnrollmentsByGroupIds([cycle.groupId]);
+
+        final groupCode = _asString(groupData['groupName']).isNotEmpty
+            ? _asString(groupData['groupName'])
+            : _asString(groupData['groupCode']);
+        final displayName = _asString(groupData['displayName']).isNotEmpty
+            ? _asString(groupData['displayName'])
+            : (_asString(groupData['name']).isNotEmpty
+                ? _asString(groupData['name'])
+                : groupCode);
+        studentGroupOverview = GroupOverview(
+          id: cycle.groupId,
+          code: groupCode,
+          name: displayName,
+          activeStudentsCount: 0,
+          students: const [],
+        );
+      } else {
+        // New category-based cycle
+        categoryId = cycle.categoryId;
+        categoryName = categoriesById[categoryId] != null
+            ? _asString(categoriesById[categoryId]!['name'])
+            : '';
+
+        final categoryGroupRows = await _readTable(
+          _groupsTable,
+          filters: {'categoryId': categoryId},
+        );
+        final allGroupIds = categoryGroupRows
+            .map((g) => _asString(g['_id']))
+            .where((id) => id.isNotEmpty)
+            .toList();
+        final allGroupIdSet = allGroupIds.toSet();
+
+        // The student's own group(s) within this category
+        final ownGroupIds =
+            groupIds.where((id) => allGroupIdSet.contains(id)).toList();
+        final ownGroupIdSet = ownGroupIds.toSet();
+
+        // Resolve student's display group
+        final ownGroupId = ownGroupIds.isNotEmpty ? ownGroupIds.first : '';
+        if (ownGroupId.isNotEmpty) {
+          final gData = categoryGroupRows
+              .where((g) => _asString(g['_id']) == ownGroupId)
+              .firstOrNull;
+          if (gData != null) {
+            final gCode = _asString(gData['groupName']).isNotEmpty
+                ? _asString(gData['groupName'])
+                : _asString(gData['groupCode']);
+            final gName = _asString(gData['displayName']).isNotEmpty
+                ? _asString(gData['displayName'])
+                : (_asString(gData['name']).isNotEmpty
+                    ? _asString(gData['name'])
+                    : gCode);
+            studentGroupOverview = GroupOverview(
+              id: ownGroupId,
+              code: gCode,
+              name: gName,
+              activeStudentsCount: 0,
+              students: const [],
+            );
+          }
+        }
+
+        if (studentGroupOverview == null) continue;
+
+        if (cycle.evaluationScope == EvaluationScope.ownGroup) {
+          // own_group: peers from student's own group(s) only
+          enrollmentsForCycle =
+              await _readActiveEnrollmentsByGroupIds(ownGroupIds);
+        } else {
+          // all_groups: peers from ALL OTHER groups (not student's own group)
+          final otherGroupIds =
+              allGroupIds.where((id) => !ownGroupIdSet.contains(id)).toList();
+          enrollmentsForCycle =
+              await _readActiveEnrollmentsByGroupIds(otherGroupIds);
+        }
       }
 
-      final categoryId = _asString(groupData['categoryId']);
-      final category = categoriesById[categoryId];
-      final categoryName = category != null 
-          ? _asString(category['name']) 
-          : '';
-
-      final activeEnrollments = await _readActiveEnrollmentsByGroupIds([groupId]);
-
-      final students = activeEnrollments.map((enrollment) {
+      final students = enrollmentsForCycle.map((enrollment) {
         return StudentOverview(
           uid: _asString(enrollment['studentUId']).isNotEmpty
               ? _asString(enrollment['studentUId'])
@@ -1155,18 +1277,14 @@ class AcademicRemoteDatasource {
       final peersToEvaluate = students.where((s) {
         final sEmail = s.email.trim().toLowerCase();
         final sUid = s.uid.trim();
-        return sEmail != normalizedEmail && 
-               (normalizedUid.isEmpty || sUid != normalizedUid);
+        return sEmail != normalizedEmail &&
+            (normalizedUid.isEmpty || sUid != normalizedUid);
       }).toList();
 
-      if (peersToEvaluate.isEmpty) {
-        continue;
-      }
+      if (peersToEvaluate.isEmpty) continue;
 
       final evaluatorKeys = <String>{};
-      if (normalizedUid.isNotEmpty) {
-        evaluatorKeys.add(normalizedUid);
-      }
+      if (normalizedUid.isNotEmpty) evaluatorKeys.add(normalizedUid);
       if (normalizedEmail.isNotEmpty) {
         evaluatorKeys.add('email:$normalizedEmail');
         evaluatorKeys.add(normalizedEmail);
@@ -1203,26 +1321,9 @@ class AcademicRemoteDatasource {
         }
       }
 
-      final groupCode = _asString(groupData['groupName']).isNotEmpty
-          ? _asString(groupData['groupName'])
-          : _asString(groupData['groupCode']);
-      final displayName = _asString(groupData['displayName']).isNotEmpty
-          ? _asString(groupData['displayName'])
-          : (_asString(groupData['name']).isNotEmpty
-                ? _asString(groupData['name'])
-                : groupCode);
-
-      final groupOverview = GroupOverview(
-        id: groupId,
-        code: groupCode,
-        name: displayName,
-        activeStudentsCount: students.length,
-        students: students,
-      );
-
       result.add(PendingEvaluationInfo(
         cycle: cycle,
-        group: groupOverview,
+        group: studentGroupOverview!,
         categoryName: categoryName,
         peersToEvaluate: peersToEvaluate,
         alreadyEvaluatedUids: alreadyEvaluatedPeerUids.toList(),
@@ -1253,16 +1354,35 @@ class AcademicRemoteDatasource {
       throw RobleException('El ciclo está cerrado');
     }
 
-    final groupId = _asString(cycle['groupId']);
     final nowIso = DateTime.now().toUtc().toIso8601String();
+
+    // Determine whether this is a new (category-based) or old (group-based)
+    // cycle by checking if criteria contains evaluationScope.
+    final cycleAsEntity = _mapRowToEvaluationCycle(cycle);
+    List<String> contextGroupIds;
+    if (cycleAsEntity.categoryId.isNotEmpty) {
+      // New cycle: groupId column holds categoryId; look up all groups
+      final categoryGroups = await _readTable(
+        _groupsTable,
+        filters: {'categoryId': cycleAsEntity.categoryId},
+      );
+      contextGroupIds = categoryGroups
+          .map((g) => _asString(g['_id']))
+          .where((id) => id.isNotEmpty)
+          .toList();
+    } else {
+      contextGroupIds = cycleAsEntity.groupId.isNotEmpty
+          ? [cycleAsEntity.groupId]
+          : [];
+    }
 
     final evaluatorEnrollment = await _findActiveStudentInGroups(
       studentUid: evaluatorUid,
-      groupIds: [groupId],
+      groupIds: contextGroupIds,
     );
     final evaluateeEnrollment = await _findActiveStudentInGroups(
       studentUid: evaluateeUid,
-      groupIds: [groupId],
+      groupIds: contextGroupIds,
     );
 
     final existing = await _readTable(
@@ -1282,10 +1402,10 @@ class AcademicRemoteDatasource {
       'comments': comments ?? '',
       'updatedAt': nowIso,
       'evaluatorGroupIdAtEval': evaluatorEnrollment.isEmpty
-          ? groupId
+          ? (contextGroupIds.isNotEmpty ? contextGroupIds.first : '')
           : _asString(evaluatorEnrollment.first['groupId']),
       'evaluateeGroupIdAtEval': evaluateeEnrollment.isEmpty
-          ? groupId
+          ? (contextGroupIds.isNotEmpty ? contextGroupIds.first : '')
           : _asString(evaluateeEnrollment.first['groupId']),
       'enrollmentIdAtEval': evaluateeEnrollment.isEmpty
           ? null
